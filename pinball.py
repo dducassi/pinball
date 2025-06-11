@@ -43,13 +43,14 @@ class Pinball:
         
         # Initialize the ball and flippers
         self.b = Ball(self)
-        self.fl = Flipper(2/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, 1/5 * self.settings.screen_width, 0.6, True)
-        self.fr = Flipper(5/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, 1/5 * self.settings.screen_width, -0.6, False)
+        self.fl = Flipper(2/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, self.settings.f_length, 0.6, True)
+        self.fr = Flipper(5/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, self.settings.f_length, -0.6, False)
     
         
         # Generate bumpers (obs) and block elements
         self.obs = []
         self.blocks = [] 
+        self.flippers = [self.fl, self.fr]
         self.gen_obs()
         self.gen_blocks()
 
@@ -187,52 +188,109 @@ class Pinball:
                     time.sleep(1.5)
                     self.b.reset()
                     score = 0  # Reset score when the game is over
-
-
-                # Check if the ball hits the left flipper
-                # fl_slope_start = (100, self.settings.screen_height - 45) 
                 
-                if 99 <= self.b.x <=166:
-
-                    (fl_end_x, fl_end_y) = self.fl.get_end_pos()
-                    
-                    m =  (fl_end_y - (self.settings.screen_height - 45)) / (fl_end_x - 100)
-                    c =  100 - m * (self.settings.screen_height - 45)
-                    fl_yline_at_ball = m * self.b.x + c
-                    if self.b.y >= self.settings.screen_height - 80:
-                        if self.b.y + self.settings.br/2 > fl_yline_at_ball:
-                            if self.fl.active:
-                                self.b.dx = self.b.dx * self.settings.flip_force
-                                self.b.dy = -(self.b.dy) * self.settings.flip_force -5
-                            elif not self.fl.active:
-                                if self.b.y >= self.settings.screen_height - 45:
-                                    self.b.dy, self.b.dx = (self.b.dx) * self.settings.deadf_bounce, self.b.dy * self.settings.deadf_bounce
-                                    
                 
-                # Check if the ball hits the right flipper
-                # fr_slope_start = (self.settings.screen_width - 100, self.settings.screen_height - 45) 
+            
+                # Find closest point on flipper to ball
 
-                if self.settings.screen_width - 99 >= self.b.x >= self.settings.screen_width - 166:
+                ball_x = self.b.x
+                ball_y = self.b.y
+                ball_dx = self.b.dx
+                ball_dy = self.b.dy
+                ball_radius = self.settings.br
+                fcollision_occurred = False
 
-                    (fr_end_x, fr_end_y) = self.fr.get_end_pos()
+                for f in self.flippers:
                     
-                    m =  (fr_end_y - (self.settings.screen_height - 45)) / (fr_end_x - (self.settings.screen_width - 100))
-                    c =  (self.settings.screen_width - 100) - m * (self.settings.screen_height - 45)
-                    fr_yline_at_ball = m * self.b.x + c
-                    if self.b.y >= self.settings.screen_height - 80:
-                        if self.b.y + self.settings.br/2 >= fr_yline_at_ball:
-                            if self.fr.active:
-                                self.b.dx = self.b.dx * self.settings.flip_force
-                                self.b.dy = -abs(self.b.dy) * self.settings.flip_force
-                            elif not self.fr.active:
-                                if self.b.y >= self.settings.screen_height - 45:
-                                    if self.b.dx <= 0:
-                                        self.b.dy, self.b.dx = self.b.dx * self.settings.deadf_bounce, (-self.b.dy) * self.settings.deadf_bounce
-                                    if self.b.dx > 0:
-                                        if self.b.dy <= 0:
-                                            self.b.dy, self.b.dx = -self.b.dx * self.settings.deadf_bounce, self.b.dy * self.settings.deadf_bounce
-                                        if self.b.dy > 0:
-                                            self.b.dy, self.b.dx = -(self.b.dx) * self.settings.deadf_bounce, (-self.b.dy) * self.settings.deadf_bounce
+
+                    # Get flipper properties
+                    pivot_x, pivot_y = f.pivot
+                    angle = f.angle
+                    length = f.length
+
+                    # Calculate flipper endpoints
+                    end_x = pivot_x + math.cos(angle) * length
+                    end_y = pivot_y + math.sin(angle) * length
+
+                    # Calculate flipper slope
+                    if abs(end_x - pivot_x) > 0.001:  # Avoid division by zero
+                        flipper_slope = (end_y - pivot_y) / (end_x - pivot_x)
+                        flipper_intercept = pivot_y - flipper_slope * pivot_x
+                        
+                        # Calculate ball's position relative to flipper line
+                        ball_relative_y = ball_y - (flipper_slope * ball_x + flipper_intercept)
+                    
+                    # Check if ball is crossing the flipper line
+                    if (f.is_left and ball_relative_y < ball_radius) or (not f.is_left and ball_relative_y > -ball_radius):
+                        # Calculate distance from ball to flipper line
+                        distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
+                    
+
+                    if distance_to_line < ball_radius:
+                        # Calculate closest point on flipper to ball
+                        # (using vector projection)
+                        flipper_vec_x = end_x - pivot_x
+                        flipper_vec_y = end_y - pivot_y
+                        to_ball_x = ball_x - pivot_x
+                        to_ball_y = ball_y - pivot_y
+                        
+                        projection = (to_ball_x * flipper_vec_x + to_ball_y * flipper_vec_y) / (length * length)
+                        t = max(0, min(1, projection))
+                        closest_x = pivot_x + t * flipper_vec_x
+                        closest_y = pivot_y + t * flipper_vec_y
+                    
+                        # Calculate actual distance to flipper segment
+                        dx = ball_x - closest_x
+                        dy = ball_y - closest_y
+                        distance = math.sqrt(dx*dx + dy*dy)
+                    
+                   
+                    
+                    
+                        if distance <= ball_radius * 3:  # Small tolerance #   or
+                            fcollision_occurred = True
+                        
+                            # Position correction to prevent sinking
+                            overlap = ball_radius - distance
+                            if distance > 0:  # Avoid division by zero
+                                ball_x += (dx /distance) * overlap
+                                ball_y += (dy / distance) * overlap
+                            
+                            # Calculate normal vector
+                            nx, ny = -flipper_vec_y/length, flipper_vec_x/length  # Perpendicular
+                            if not f.is_left:
+                                nx, ny = -nx, -ny  # Flip for right flipper
+                            
+                            
+                            
+                            # Ensure normal faces toward ball
+                            dot_to_ball = (ball_x - closest_x) * nx + (ball_y - closest_y) * ny
+                            if dot_to_ball < 0:
+                                nx, ny = -nx, -ny
+                            
+                            # Calculate velocity dot product with normal
+                            dot_product = ball_dx * nx + ball_dy * ny
+                            
+                            # Only bounce if moving toward flipper
+                            if dot_product < 0:
+                                # Calculate reflection
+                                ball_dx = ball_dx - 2 * dot_product * nx
+                                ball_dy = ball_dy - 2 * dot_product * ny
+                                
+                                # Apply energy loss/boost based on flipper state
+                                if f.active:
+                                    ball_dx *= self.settings.flip_force
+                                    ball_dy *= self.settings.flip_force
+                                else:
+                                    ball_dx *= self.settings.deadf_bounce
+                                    ball_dy *= self.settings.deadf_bounce
+
+                # Update ball state if collision occurred
+                if fcollision_occurred:
+                    self.b.x, self.b.y = ball_x, ball_y
+                    self.b.dx, self.b.dy = ball_dx, ball_dy
+                                
+
                                           
 
 
