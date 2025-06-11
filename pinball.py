@@ -213,7 +213,7 @@ class Pinball:
                     end_y = pivot_y + math.sin(angle) * length
 
                     # Calculate flipper slope
-                    if abs(end_x - pivot_x) > 0.001:  # Avoid division by zero
+                    if abs(end_x - pivot_x) > 0:  # Avoid division by zero
                         flipper_slope = (end_y - pivot_y) / (end_x - pivot_x)
                         flipper_intercept = pivot_y - flipper_slope * pivot_x
                         
@@ -226,7 +226,7 @@ class Pinball:
                         distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
                     
 
-                    if distance_to_line < ball_radius:
+                    if  distance_to_line < 2* ball_radius + math.hypot(ball_dx, ball_dy):
                         # Calculate closest point on flipper to ball
                         # (using vector projection)
                         flipper_vec_x = end_x - pivot_x
@@ -247,14 +247,14 @@ class Pinball:
                    
                     
                     
-                        if distance <= ball_radius * 3:  # Small tolerance #   or
+                        if distance <= ball_radius + 5: # Small tolerance #   or
                             fcollision_occurred = True
                         
                             # Position correction to prevent sinking
                             overlap = ball_radius - distance
                             if distance > 0:  # Avoid division by zero
                                 ball_x += (dx /distance) * overlap
-                                ball_y += (dy / distance) * overlap
+                                ball_y += (dy /distance) * overlap
                             
                             # Calculate normal vector
                             nx, ny = -flipper_vec_y/length, flipper_vec_x/length  # Perpendicular
