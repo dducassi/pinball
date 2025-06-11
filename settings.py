@@ -1,6 +1,6 @@
 ##SETTINGS##
 
-#Settings for Block Breaker
+#Settings for Pinball
 
 
 
@@ -18,7 +18,8 @@ class Settings:
         self.block_bounce = 0.8
         
 
-        # Paddle properties
+        # Flipper properties
+        self.f_length = 4/21 * self.screen_width
         self.flip_force = 1.25
         self.deadf_bounce = 0.75
 
