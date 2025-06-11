@@ -284,6 +284,7 @@ class Pinball:
                                 else:
                                     ball_dx *= self.settings.deadf_bounce
                                     ball_dy *= self.settings.deadf_bounce
+                                break
 
                 # Update ball state if collision occurred
                 if fcollision_occurred:
