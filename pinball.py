@@ -310,7 +310,7 @@ class Pinball:
                         if self.b.x <= 100 + self.settings.br:
                             if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
                                 if self.b.y + self.settings.br >= line_y_at_ball:
-                                    self.b.y = line_y_at_ball - self.settings.br
+                                    self.b.y = line_y_at_ball - self.settings.br * math.sqrt(2)
                                     if self.b.dx <= 0:
                                         self.b.dy, self.b.dx = -abs(self.b.dx) * self.settings.block_bounce, self.b.dy * self.settings.block_bounce
                                     else:
@@ -334,7 +334,7 @@ class Pinball:
                         line_y2_at_ball = m * self.b.x + c
                         if self.b.x > self.settings.screen_width - 100 - self.settings.br:
                             if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
-                                if self.b.y + self.settings.br >= line_y2_at_ball:
+                                if self.b.y + self.settings.br * math.sqrt(2) >= line_y2_at_ball:
                                     self.b.y = line_y2_at_ball - self.settings.br
                                     if self.b.dx <= 0:
                                         self.b.dy, self.b.dx = self.b.dx * self.settings.block_bounce, (-self.b.dy) * self.settings.block_bounce
