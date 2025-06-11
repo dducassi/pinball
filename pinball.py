@@ -1,0 +1,368 @@
+
+### WIZARD PINBALL ###
+
+import pygame
+import sys
+import random
+import time
+import math
+from settings import Settings
+from ball import Ball
+from obstacles import Obstacle
+from blocks import Block
+from flipper import Flipper
+
+
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, 'frozen', False):
+    # Running as EXE - use temporary bundle directory
+    base_dir = sys._MEIPASS
+else:
+    # Running as script - use normal script directory
+    base_dir = script_dir
+
+
+
+class Pinball:
+    
+    
+
+    def __init__(self):
+        # Initialize Pygame and settings
+        pygame.init()
+
+        self.settings = Settings()
+
+        # Set up the game window
+        self.screen = pygame.display.set_mode((self.settings.screen_width, 
+            self.settings.screen_height))
+        self.bg = pygame.image.load(os.path.join(
+                                        base_dir, 'wizard.png'))
+        pygame.display.set_caption('Wizard Pinball')
+        
+        # Initialize the ball and flippers
+        self.b = Ball(self)
+        self.fl = Flipper(2/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, 1/5 * self.settings.screen_width, 0.6, True)
+        self.fr = Flipper(5/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, 1/5 * self.settings.screen_width, -0.6, False)
+    
+        
+        # Generate bumpers (obs) and block elements
+        self.obs = []
+        self.blocks = [] 
+        self.gen_obs()
+        self.gen_blocks()
+
+    def gen_obs(self):
+        x = self.settings.screen_width / 2
+        y = (self.settings.screen_height) / 5
+        c = self.settings.blu
+        self.obs.append(Obstacle(x, y, c))
+        x = 0
+        y = 0
+        c = self.settings.blu
+        self.obs.append(Obstacle(x, y, c))
+        x = self.settings.screen_width
+        y = 0
+        c = self.settings.blu
+        self.obs.append(Obstacle(x, y, c))
+        self.draw_obs()
+        x = -3 * self.settings.br
+        y = 4/7 * (self.settings.screen_height)
+        c = self.settings.blu
+        self.obs.append(Obstacle(x, y, c))
+        x = self.settings.screen_width + 3 * self.settings.br
+        y = 4/7 * (self.settings.screen_height)
+        c = self.settings.blu
+        self.obs.append(Obstacle(x, y, c))
+
+
+
+
+    def draw_obs(self):
+        for ob in self.obs:
+            pygame.draw.circle(self.screen, ob.c, (ob.x, ob.y), self.settings.orad)
+    
+    def gen_blocks(self):
+
+        # Left lower block
+        x1 = 0
+        y1 = self.settings.screen_height
+        x2 = 0
+        y2 = self.settings.screen_height - (3/14) * self.settings.screen_height
+        x3 = (2/7) * self.settings.screen_width
+        y3 = self.settings.screen_height - (1/14) * self.settings.screen_height
+        x4 = (2/7) * self.settings.screen_width
+        y4 = self.settings.screen_height
+        c = self.settings.gry
+        self.blocks.append(Block(x1, y1, x2, y2, x3, y3, x4, y4, c))
+        #[(0, self.settings.screen_height), (100, self.settings.screen_height), (0, self.settings.screen_height - 120), (100, self.settings.screen_height - 20)]
+
+        # Right lower block
+        x1 = self.settings.screen_width
+        y1 = self.settings.screen_height
+        x2 = self.settings.screen_width
+        y2 = self.settings.screen_height - (3/14) * self.settings.screen_height
+        x3 = self.settings.screen_width - (2/7) * self.settings.screen_width 
+        y3 = self.settings.screen_height - (1/14) * self.settings.screen_height
+        x4 = self.settings.screen_width - (2/7) * self.settings.screen_width 
+        y4 = self.settings.screen_height
+
+        c = self.settings.gry
+        self.blocks.append(Block(x1, y1, x2, y2, x3, y3, x4, y4, c))
+
+    def draw_blocks(self):
+        for block in self.blocks:
+            pygame.draw.polygon(self.screen, block.c, [(block.x1, block.y1), (block.x2, block.y2), (block.x3, block.y3), (block.x4, block.y4)])
+
+    
+
+
+    def run_game(self):
+        running = False  # Initially game is not running
+        paused = False   # Initially game is not paused
+        score = 0
+        
+        show_start_text = True  # Display "Press S to start" initially
+
+        # Main game loop
+        while True:
+            self.screen.blit(self.bg, (0, 0))  # Paint background
+
+            
+            # Handle events
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_s:  # Start or resume the game
+                        if not running:
+                            running = True
+                            self.b.reset()
+                            score = 0
+                            show_start_text = False
+                    if event.key == pygame.K_r:
+                        self.b.reset()
+                    if event.key == pygame.K_LEFT:
+                        self.fl.active = True
+                        self.fl.activate()
+                    if event.key == pygame.K_RIGHT:
+                        self.fr.active = True
+                        self.fr.activate()
+                        
+                    elif event.key == pygame.K_p:  # Pause the game
+                        paused = not paused
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_LEFT:
+                        self.fl.active = False
+                        self.fl.deactivate()
+                    if event.key == pygame.K_RIGHT:
+                        self.fr.active = False
+                        self.fr.deactivate()
+
+            
+
+            # Display start text if game not running
+            if not running and show_start_text:
+                f = pygame.font.Font(None, 36)
+                start_text = f.render("Press S to start", True, self.settings.wht)
+                self.screen.blit(start_text, ((self.settings.screen_width - start_text.get_width()) // 2, (self.settings.screen_height - start_text.get_height()) // 2))
+            elif running and paused:
+                f = pygame.font.Font(None, 36)
+                pause_text = f.render("Paused", True, self.settings.wht)
+                self.screen.blit(pause_text, ((self.settings.screen_width - pause_text.get_width()) // 2, (self.settings.screen_height - pause_text.get_height()) // 2))
+                
+               
+
+            # If game is running, not paused
+            if running and not paused:
+
+                # Move the ball and check for wall collisions
+                self.b.move()
+                self.fl.update()
+                self.fr.update()
+                
+                if self.b.check_collision():
+                    time.sleep(1.5)
+                    self.b.reset()
+                    score = 0  # Reset score when the game is over
+
+
+                # Check if the ball hits the left flipper
+                # fl_slope_start = (100, self.settings.screen_height - 45) 
+                
+                if 99 <= self.b.x <=166:
+
+                    (fl_end_x, fl_end_y) = self.fl.get_end_pos()
+                    
+                    m =  (fl_end_y - (self.settings.screen_height - 45)) / (fl_end_x - 100)
+                    c =  100 - m * (self.settings.screen_height - 45)
+                    fl_yline_at_ball = m * self.b.x + c
+                    if self.b.y >= self.settings.screen_height - 80:
+                        if self.b.y + self.settings.br/2 > fl_yline_at_ball:
+                            if self.fl.active:
+                                self.b.dx = self.b.dx * self.settings.flip_force
+                                self.b.dy = -(self.b.dy) * self.settings.flip_force -5
+                            elif not self.fl.active:
+                                if self.b.y >= self.settings.screen_height - 45:
+                                    self.b.dy, self.b.dx = (self.b.dx) * self.settings.deadf_bounce, self.b.dy * self.settings.deadf_bounce
+                                    
+                
+                # Check if the ball hits the right flipper
+                # fr_slope_start = (self.settings.screen_width - 100, self.settings.screen_height - 45) 
+
+                if self.settings.screen_width - 99 >= self.b.x >= self.settings.screen_width - 166:
+
+                    (fr_end_x, fr_end_y) = self.fr.get_end_pos()
+                    
+                    m =  (fr_end_y - (self.settings.screen_height - 45)) / (fr_end_x - (self.settings.screen_width - 100))
+                    c =  (self.settings.screen_width - 100) - m * (self.settings.screen_height - 45)
+                    fr_yline_at_ball = m * self.b.x + c
+                    if self.b.y >= self.settings.screen_height - 80:
+                        if self.b.y + self.settings.br/2 >= fr_yline_at_ball:
+                            if self.fr.active:
+                                self.b.dx = self.b.dx * self.settings.flip_force
+                                self.b.dy = -abs(self.b.dy) * self.settings.flip_force
+                            elif not self.fr.active:
+                                if self.b.y >= self.settings.screen_height - 45:
+                                    if self.b.dx <= 0:
+                                        self.b.dy, self.b.dx = self.b.dx * self.settings.deadf_bounce, (-self.b.dy) * self.settings.deadf_bounce
+                                    if self.b.dx > 0:
+                                        if self.b.dy <= 0:
+                                            self.b.dy, self.b.dx = -self.b.dx * self.settings.deadf_bounce, self.b.dy * self.settings.deadf_bounce
+                                        if self.b.dy > 0:
+                                            self.b.dy, self.b.dx = -(self.b.dx) * self.settings.deadf_bounce, (-self.b.dy) * self.settings.deadf_bounce
+                                          
+
+
+                # Check for collision with blocks
+                for block in self.blocks:
+                    if block is self.blocks[0]:
+                        slope_start = block.x2, block.y2 
+                        slope_end = block.x3, block.y3
+                        # Calculate slope: y = mx + c
+                        m = (block.y3 - block.y2) / (block.x3 - block.x2)
+                        c =  block.y2 - m * block.x2
+
+                        # Check if ball is below the left slope
+                        line_y_at_ball = m * self.b.x + c
+                        line_x_at_ball = (self.b.y - c) / m
+                        if self.b.x <= 100 + self.settings.br:
+                            if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
+                                if self.b.y + self.settings.br >= line_y_at_ball:
+                                    self.b.y = line_y_at_ball - self.settings.br
+                                    if self.b.dx <= 0:
+                                        self.b.dy, self.b.dx = -abs(self.b.dx) * self.settings.block_bounce, self.b.dy * self.settings.block_bounce
+                                    else:
+                                        self.b.dy, self.b.dx = -(self.b.dx) * self.settings.block_bounce, self.b.dy * self.settings.block_bounce
+
+
+                        else:
+                            # If below flippers, bounce right
+                            if self.b.dy > self.settings.screen_height - 10:
+                                if self.b.dx - self.settings.br <= 100:
+                                    self.b.dx = -0.8 * self.b.dx
+                                if self.b.dx + self.settings.br <= 100:
+                                    self.b.dx = -0.8 * self.b.dx
+                        
+                    if block is self.blocks[1]:
+                        slope_start = block.x2, block.y2 
+                        slope_end = block.x3, block.y3
+                        # Calculate slope: y = mx + c
+                        m =  (block.y3 - block.y2) / (block.x3 - block.x2)
+                        c =  block.y2 - m * block.x2
+                        line_y2_at_ball = m * self.b.x + c
+                        if self.b.x > self.settings.screen_width - 100 - self.settings.br:
+                            if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
+                                if self.b.y + self.settings.br >= line_y2_at_ball:
+                                    self.b.y = line_y2_at_ball - self.settings.br
+                                    if self.b.dx <= 0:
+                                        self.b.dy, self.b.dx = self.b.dx * self.settings.block_bounce, (-self.b.dy) * self.settings.block_bounce
+                                    elif self.b.dx > 0:
+                                        if self.b.dy <= 0:
+                                            self.b.dy, self.b.dx = -self.b.dx * self.settings.block_bounce, self.b.dy * self.settings.block_bounce
+                                        if self.b.dy > 0:
+                                            self.b.dy, self.b.dx = (-self.b.dx) * self.settings.block_bounce, (-self.b.dy) * self.settings.block_bounce
+                                                             
+                                    
+
+                # Check for collisions with obstacles
+                for ob in self.obs:
+                    # Circular collision detection
+                    # If ball's x is within obstacle's radius
+                    distx = self.b.x - ob.x
+                    disty = self.b.y - ob.y
+                    distance = math.sqrt(distx**2 + disty**2) # a^2 + b^2 = c^2
+                    min_distance = self.settings.orad + self.settings.br
+                    
+                    if distance < min_distance:
+                        # Fix Location:
+                        if distance > 0:
+                            correction = (min_distance - distance) / distance
+                            self.b.x += distx * correction
+                            self.b.y += disty * correction
+
+                        # Calculate normal vector (from obstacle to ball)
+                        if distance == 0:  # Handle exactly overlapping centers
+                            nx, ny = 1, 0
+
+                        else:
+                            nx = distx / distance  # Normalized vector from obstacle to ball
+                            ny = disty / distance
+            
+                        # Original velocity components
+                        dx_old, dy_old = self.b.dx, self.b.dy
+                            
+                        # Compute dot product (v · n)
+                        dot_product = dx_old * nx + dy_old * ny
+                       
+                            
+                            
+                        if dot_product < 0:
+                            # Simplified reflection (normalized vector)
+                            self.b.dx = self.b.dx - 2 * dot_product * nx
+                            self.b.dy = self.b.dy - 2 * dot_product * ny
+
+                        # Update velocity with reflection
+                        self.b.dx *= self.settings.obs_bounce
+                        self.b.dy *= self.settings.obs_bounce
+                            
+                        score += self.settings.pph # Score goes up
+                        if ob.c == self.settings.red:
+                            ob.c = self.settings.blu
+                        elif ob.c == self.settings.blu:
+                            ob.c = self.settings.ylw
+                        elif ob.c == self.settings.ylw:
+                            ob.c = self.settings.red
+                        
+                
+
+            # Draw game elements
+            self.fl.draw(self.screen)
+            self.fr.draw(self.screen)
+            self.b.draw_ball()
+            for block in self.blocks:
+                self.draw_blocks()
+            for ob in self.obs:
+                self.draw_obs()
+            
+
+
+            # Display the current score
+            f = pygame.font.Font(None, 36)
+            score_text = f.render(f'Score: {score}', True, self.settings.wht)
+            self.screen.blit(score_text, (20, 20))
+
+
+            # Update the display
+            pygame.display.flip()
+
+
+            # Control the frame rate
+            pygame.time.Clock().tick(60)
+
+if __name__ == '__main__':
+    # Make a game instance and run the game.
+    pb = Pinball()
+    pb.run_game()
