@@ -223,8 +223,8 @@ class Pinball:
                         
 
                     # Calculate flipper endpoints
-                    end_x = pivot_x + math.cos(angle) * length
-                    end_y = pivot_y + math.sin(angle) * length
+                    end_x, end_y = f.get_end_pos
+                    
 
                     # Calculate flipper slope
                     if abs(end_x - pivot_x) > 0:  # Avoid division by zero
@@ -235,6 +235,7 @@ class Pinball:
                         ball_relative_y = ball_y - (flipper_slope * ball_x + flipper_intercept)
                     
                     # Check if ball is crossing the flipper line
+                    # METHOD 1
                     if (f.is_left and ball_relative_y < ball_radius) or (not f.is_left and ball_relative_y > -ball_radius):
                         # Calculate distance from ball to flipper line
                         distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
@@ -307,6 +308,7 @@ class Pinball:
                                 break
 
                     # Now check if line segment to next_x and next_y and current self.b.x, self.b.y intersects with flipper line, bounce
+                    # METHOD 2
                     if not fcollision_occurred and distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
                         
                         # NEW: Segment intersection check (if no collision detected yet)
