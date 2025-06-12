@@ -291,11 +291,11 @@ class Pinball:
                                     ball_dy *= self.settings.deadf_bounce
                                 break
 
-                    # elif line segment from self.b.prev_x, self.bprev_y and current self.b.x, self.b.y intersects with flipper line, bounce
-                    elif self.b.y > 0:
+                    # elif line segment to next_x and next_y and current self.b.x, self.b.y intersects with flipper line, bounce
+                    elif not fcollision_occurred:
                         
                         # NEW: Segment intersection check (if no collision detected yet)
-                        if not fcollision_occurred:
+                        if self.b.dy > 50 or abs(self.b.dx) > 50:
                             # Define ball's movement vector
                             next_x = self.b.x + self.b.dx
                             next_y = self.b.y + self.b.dy
@@ -318,7 +318,7 @@ class Pinball:
                             
                             if abs(denom) > 1e-10:  # Not parallel
                                 
-                                final_dx, final_dy = self.b.dx, self.b.dy
+                                ball_dx, ball_dy = self.b.dx, self.b.dy
                                 t = ((ball_seg_start[0] - flipper_seg_start[0]) * (flipper_seg_end[1] - flipper_seg_start[1]) - 
                                     (ball_seg_start[1] - flipper_seg_start[1]) * (flipper_seg_end[0] - flipper_seg_start[0])) / denom
                                 u = -((ball_seg_start[0] - ball_seg_end[0]) * (ball_seg_start[1] - flipper_seg_start[1]) - 
@@ -340,22 +340,22 @@ class Pinball:
                                             nx, ny = -nx, -ny  # Flip normal for right flipper
                                         
                                         # Position correction (push ball to edge)
-                                        ball_x = intersect_x + nx * ball_radius
-                                        ball_y = intersect_y + ny * ball_radius
+                                        ball_x = intersect_x + ball_radius
+                                        ball_y = intersect_y + ball_radius
                                         
                                         # Calculate reflection
-                                        dot = final_dx * nx + final_dy * ny
+                                        dot = ball_dx * nx + ball_dy * ny
                                         if dot < 0:  # Only bounce if moving toward flipper
-                                            final_dx = final_dx - 2 * dot * nx
-                                            final_dy = final_dy - 2 * dot * ny
+                                            ball_dx = ball_dx - 2 * dot * nx
+                                            ball_dy = ball_dy - 2 * dot * ny
                                             
                                             # Apply force multipliers
                                             if f.active:
-                                                final_dx *= self.settings.flip_force
-                                                final_dy *= self.settings.flip_force
+                                                ball_dx *= self.settings.flip_force
+                                                ball_dy *= self.settings.flip_force
                                             else:
-                                                final_dx *= self.settings.deadf_bounce
-                                                final_dy *= self.settings.deadf_bounce
+                                                ball_dx *= self.settings.deadf_bounce
+                                                ball_dy *= self.settings.deadf_bounce
                                         
                                         fcollision_occurred = True
                                         break  # Handle only first collision
