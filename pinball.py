@@ -208,6 +208,14 @@ class Pinball:
                     angle = f.angle
                     length = f.length
 
+                    if f == self.fl:
+                        if angle < -0.5:
+                            f.active = False
+                    elif f == self.fr:
+                        if angle > 0.5:
+                            f.active = False
+                        
+
                     # Calculate flipper endpoints
                     end_x = pivot_x + math.cos(angle) * length
                     end_y = pivot_y + math.sin(angle) * length
