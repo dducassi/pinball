@@ -68,12 +68,12 @@ class Pinball:
         c = self.settings.blu
         self.obs.append(Obstacle(x, y, c))
         self.draw_obs()
-        x = -3 * self.settings.br
-        y = 4/7 * (self.settings.screen_height)
+        x = .22 * self.settings.orad
+        y = 6/7 * (self.settings.screen_height)
         c = self.settings.blu
         self.obs.append(Obstacle(x, y, c))
-        x = self.settings.screen_width + 3 * self.settings.br
-        y = 4/7 * (self.settings.screen_height)
+        x = self.settings.screen_width - .22 * self.settings.orad
+        y = 6/7 * (self.settings.screen_height)
         c = self.settings.blu
         self.obs.append(Obstacle(x, y, c))
 
@@ -400,10 +400,11 @@ class Pinball:
             self.fl.draw(self.screen)
             self.fr.draw(self.screen)
             self.b.draw_ball()
-            for block in self.blocks:
-                self.draw_blocks()
             for ob in self.obs:
                 self.draw_obs()
+            for block in self.blocks:
+                self.draw_blocks()
+           
             
 
 
