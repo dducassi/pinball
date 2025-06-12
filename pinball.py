@@ -180,14 +180,12 @@ class Pinball:
             if running and not paused:
 
                 # Move the ball and check for wall collisions
-                self.b.move()
                 self.fl.update()
                 self.fr.update()
                 
-                if self.b.check_collision():
-                    time.sleep(1.5)
-                    self.b.reset()
-                    score = 0  # Reset score when the game is over
+                
+                
+                
                 
                 
             
@@ -254,7 +252,7 @@ class Pinball:
                     
     
                     
-                        if distance <= ball_radius + 5: # Small tolerance #   or
+                        if distance <= ball_radius + 5: # Small tolerance # 
                             fcollision_occurred = True
                         
                             # Position correction to prevent sinking
@@ -293,6 +291,77 @@ class Pinball:
                                     ball_dy *= self.settings.deadf_bounce
                                 break
 
+                    # elif line segment from self.b.prev_x, self.bprev_y and current self.b.x, self.b.y intersects with flipper line, bounce
+                    elif self.b.y > 0:
+                        
+                        # NEW: Segment intersection check (if no collision detected yet)
+                        if not fcollision_occurred:
+                            # Define ball's movement vector
+                            next_x = self.b.x + self.b.dx
+                            next_y = self.b.y + self.b.dy
+                            
+                            ball_radius = self.settings.br
+
+    
+                            
+                            # Define ball path segment (current to next position)
+                            ball_seg_start = (self.b.x, self.b.y)
+                            ball_seg_end = (next_x, next_y)
+                            
+                            # Define flipper segment
+                            flipper_seg_start = (pivot_x, pivot_y)
+                            flipper_seg_end = (end_x, end_y)
+                            
+                            # Calculate intersection
+                            denom = ((ball_seg_end[0] - ball_seg_start[0]) * (flipper_seg_end[1] - flipper_seg_start[1]) - 
+                                    (ball_seg_end[1] - ball_seg_start[1]) * (flipper_seg_end[0] - flipper_seg_start[0]))
+                            
+                            if abs(denom) > 1e-10:  # Not parallel
+                                
+                                final_dx, final_dy = self.b.dx, self.b.dy
+                                t = ((ball_seg_start[0] - flipper_seg_start[0]) * (flipper_seg_end[1] - flipper_seg_start[1]) - 
+                                    (ball_seg_start[1] - flipper_seg_start[1]) * (flipper_seg_end[0] - flipper_seg_start[0])) / denom
+                                u = -((ball_seg_start[0] - ball_seg_end[0]) * (ball_seg_start[1] - flipper_seg_start[1]) - 
+                                    (ball_seg_start[1] - ball_seg_end[1]) * (ball_seg_start[0] - flipper_seg_start[0])) / denom
+                                
+                                if 0 <= t <= 1 and 0 <= u <= 1:  # Segments intersect
+                                    # Calculate exact intersection point
+                                    intersect_x = ball_seg_start[0] + t * (ball_seg_end[0] - ball_seg_start[0])
+                                    intersect_y = ball_seg_start[1] + t * (ball_seg_end[1] - ball_seg_start[1])
+                                    
+                                    # Calculate flipper normal vector
+                                    flipper_vec_x = end_x - pivot_x
+                                    flipper_vec_y = end_y - pivot_y
+                                    flen = math.hypot(flipper_vec_x, flipper_vec_y)
+                                    if flen > 0:
+                                        nx = -flipper_vec_y / flen  # Perpendicular (normal)
+                                        ny = flipper_vec_x / flen
+                                        if not f.is_left:
+                                            nx, ny = -nx, -ny  # Flip normal for right flipper
+                                        
+                                        # Position correction (push ball to edge)
+                                        ball_x = intersect_x + nx * ball_radius
+                                        ball_y = intersect_y + ny * ball_radius
+                                        
+                                        # Calculate reflection
+                                        dot = final_dx * nx + final_dy * ny
+                                        if dot < 0:  # Only bounce if moving toward flipper
+                                            final_dx = final_dx - 2 * dot * nx
+                                            final_dy = final_dy - 2 * dot * ny
+                                            
+                                            # Apply force multipliers
+                                            if f.active:
+                                                final_dx *= self.settings.flip_force
+                                                final_dy *= self.settings.flip_force
+                                            else:
+                                                final_dx *= self.settings.deadf_bounce
+                                                final_dy *= self.settings.deadf_bounce
+                                        
+                                        fcollision_occurred = True
+                                        break  # Handle only first collision
+
+
+
                 # Update ball state if collision occurred
                 if fcollision_occurred:
                     self.b.x, self.b.y = ball_x, ball_y
@@ -317,7 +386,7 @@ class Pinball:
                         if self.b.x <= 100 + self.settings.br:
                             if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
                                 if self.b.y +  self.settings.br * 1.415 >= line_y_at_ball:
-                                    self.b.y = line_y_at_ball - self.settings.br
+                                    self.b.y = line_y_at_ball - self.settings.br * 1.415
                                     if self.b.dx <= 0:
                                         self.b.dy, self.b.dx = -abs(self.b.dx) * self.settings.block_bounce, self.b.dy * self.settings.block_bounce
                                     else:
@@ -342,7 +411,7 @@ class Pinball:
                         if self.b.x > self.settings.screen_width - 100 - self.settings.br:
                             if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
                                 if self.b.y + self.settings.br * 1.415 >= line_y2_at_ball:
-                                    self.b.y = line_y2_at_ball - self.settings.br
+                                    self.b.y = line_y2_at_ball - self.settings.br * 1.415
                                     if self.b.dx <= 0:
                                         self.b.dy, self.b.dx = self.b.dx * self.settings.block_bounce, (-self.b.dy) * self.settings.block_bounce
                                     elif self.b.dx > 0:
@@ -402,7 +471,11 @@ class Pinball:
                         elif ob.c == self.settings.ylw:
                             ob.c = self.settings.red
                         
-                
+                self.b.move()
+                if self.b.check_collision():
+                        time.sleep(1.5)
+                        self.b.reset()
+                        score = 0  # Reset score when the game is over
 
             # Draw game elements
             self.fl.draw(self.screen)
