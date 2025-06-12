@@ -337,7 +337,7 @@ class Pinball:
                                         nx = -flipper_vec_y / flen  # Perpendicular (normal)
                                         ny = flipper_vec_x / flen
                                         if not f.is_left:
-                                            nx, ny = -nx, ny  # Flip normal for right flipper
+                                            nx, ny = -nx, -ny  # Flip normal for right flipper
                                         
                                         # Position correction (push ball to edge)
                                         ball_x = intersect_x + nx * ball_radius
