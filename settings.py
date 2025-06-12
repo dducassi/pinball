@@ -22,6 +22,8 @@ class Settings:
         self.f_length = 4/21 * self.screen_width
         self.flip_force = 1.25
         self.deadf_bounce = 0.75
+        self.collision_samples = 4  # Number of path samples
+        self.collision_tolerance = 2  # Collision margin
 
         # Obstacle properties
         self.orad = 8/100 * self.screen_height   # obstacle radius
@@ -35,7 +37,7 @@ class Settings:
         self.wht = (255, 255, 255)
         self.blk = (0, 0, 0)
         self.red = (255, 0, 0)
-        self.blu = (0, 0, 255)
+        self.blu = (0, 100, 255)
         self.grn = (0, 255, 0)
         self.ylw = (255, 255, 0)
         self.ong = (255, 130, 0)
