@@ -272,8 +272,7 @@ class Pinball:
                                 print(f"Corrected by method 1 to {ball_x}, {ball_y}")
                                 print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
 
-                                self.b.x = ball_x
-                                self.b.y = ball_y
+                                
                                 position_corrected = True
                             
                             # Calculate normal vector
@@ -304,7 +303,7 @@ class Pinball:
                                 else:
                                     ball_dx *= self.settings.deadf_bounce
                                     ball_dy *= self.settings.deadf_bounce
-                                
+                                print(f"BOUNCED by method 1")
                                 break
 
                     # Now check if line segment to next_x and next_y and current self.b.x, self.b.y intersects with flipper line, bounce
@@ -319,8 +318,8 @@ class Pinball:
     
                             
                             # Define ball path segment (current to next position)
-                            ball_seg_start = (self.b.x, self.b.y)
-                            ball_seg_end = (old_x, old_y)
+                            ball_seg_start = (old_x, old_y)
+                            ball_seg_end = (self.b.x, self.b.y)
                             
                             # Define flipper segment
                             flipper_seg_start = (pivot_x, pivot_y)
@@ -359,8 +358,7 @@ class Pinball:
                                         ball_y = intersect_y + ny * ball_radius
                                         print(f"Corrected by method 2 to {ball_x}, {ball_y}")
                                         print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
-                                        self.b.x = ball_x
-                                        self.b.y = ball_y
+                                        
                                         position_corrected = True
                                        
                                         
@@ -378,7 +376,7 @@ class Pinball:
                                                 ball_dx *= self.settings.deadf_bounce
                                                 ball_dy *= self.settings.deadf_bounce
                                         
-                                        
+                                        print(f"BOUNCED by method 2")
                                         break  # Handle only first collision
 
 
