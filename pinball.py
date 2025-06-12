@@ -292,7 +292,7 @@ class Pinball:
                                 break
 
                     # elif line segment to next_x and next_y and current self.b.x, self.b.y intersects with flipper line, bounce
-                    elif not fcollision_occurred:
+                    if distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
                         
                         # NEW: Segment intersection check (if no collision detected yet)
                         if self.b.dy > 50 or abs(self.b.dx) > 50:
@@ -337,7 +337,7 @@ class Pinball:
                                         nx = -flipper_vec_y / flen  # Perpendicular (normal)
                                         ny = flipper_vec_x / flen
                                         if not f.is_left:
-                                            nx, ny = -nx, -ny  # Flip normal for right flipper
+                                            nx, ny = -nx, ny  # Flip normal for right flipper
                                         
                                         # Position correction (push ball to edge)
                                         ball_x = intersect_x + nx * ball_radius
