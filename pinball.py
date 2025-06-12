@@ -182,6 +182,13 @@ class Pinball:
                 # Move the ball and check for wall collisions
                 self.fl.update()
                 self.fr.update()
+
+
+                # Save old position
+                old_x, old_y = self.b.x, self.b.y
+
+                # Then move ball
+                self.b.move()
                 
                 
                 
@@ -296,9 +303,7 @@ class Pinball:
                         
                         # NEW: Segment intersection check (if no collision detected yet)
                         if self.b.dy > 50 or abs(self.b.dx) > 50:
-                            # Define ball's movement vector
-                            next_x = self.b.x + self.b.dx
-                            next_y = self.b.y + self.b.dy
+                            
                             
                             ball_radius = self.settings.br
 
@@ -306,7 +311,7 @@ class Pinball:
                             
                             # Define ball path segment (current to next position)
                             ball_seg_start = (self.b.x, self.b.y)
-                            ball_seg_end = (next_x, next_y)
+                            ball_seg_end = (old_x, old_y)
                             
                             # Define flipper segment
                             flipper_seg_start = (pivot_x, pivot_y)
@@ -477,7 +482,7 @@ class Pinball:
                         self.b.reset()
                         score = 0  # Reset score when the game is over
                 
-                self.b.move()
+                
 
             # Draw game elements
             self.fl.draw(self.screen)
