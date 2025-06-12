@@ -339,6 +339,7 @@ class Pinball:
                                     flipper_vec_y = end_y - pivot_y
                                     flen = math.hypot(flipper_vec_x, flipper_vec_y)
                                     if flen > 0:
+                                        fcollision_occurred = True
                                         nx = -flipper_vec_y / flen  # Perpendicular (normal)
                                         ny = flipper_vec_x / flen
                                         if not f.is_left:
@@ -362,7 +363,7 @@ class Pinball:
                                                 ball_dx *= self.settings.deadf_bounce
                                                 ball_dy *= self.settings.deadf_bounce
                                         
-                                        fcollision_occurred = True
+                                        
                                         break  # Handle only first collision
 
 
@@ -485,13 +486,15 @@ class Pinball:
                 
 
             # Draw game elements
+            
+            
+            self.draw_obs()
+            self.draw_blocks()
+
+            self.b.draw_ball()
+
             self.fl.draw(self.screen)
             self.fr.draw(self.screen)
-            self.b.draw_ball()
-            for ob in self.obs:
-                self.draw_obs()
-            for block in self.blocks:
-                self.draw_blocks()
            
             
 
