@@ -203,6 +203,7 @@ class Pinball:
                 ball_dx = self.b.dx
                 ball_dy = self.b.dy
                 ball_radius = self.settings.br
+                position_corrected = False
                 fcollision_occurred = False
 
                 for f in self.flippers:
@@ -259,14 +260,21 @@ class Pinball:
                     
     
                     
-                        if distance <= ball_radius + 5: # Small tolerance # 
+                        if distance <= ball_radius * 1.415: # Small tolerance # 
                             fcollision_occurred = True
                         
                             # Position correction to prevent sinking
                             overlap = ball_radius - distance
                             if distance > 0:  # Avoid division by zero
-                                ball_x += (dx /distance) * overlap
-                                ball_y += (dy /distance) * overlap
+                                ball_x = closest_x + (dx / distance) * (ball_radius + 0.5)
+                                ball_y = closest_y + (dy / distance) * (ball_radius + 0.5)
+                                
+                                print(f"Corrected by method 1 to {ball_x}, {ball_y}")
+                                print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
+
+                                self.b.x = ball_x
+                                self.b.y = ball_y
+                                position_corrected = True
                             
                             # Calculate normal vector
                             nx, ny = -flipper_vec_y/length, flipper_vec_x/length  # Perpendicular
@@ -284,7 +292,7 @@ class Pinball:
                             dot_product = ball_dx * nx + ball_dy * ny
                             
                             # Only bounce if moving toward flipper
-                            if dot_product < 0:
+                            if dot_product < 0 or position_corrected:
                                 # Calculate reflection
                                 ball_dx = ball_dx - 2 * dot_product * nx
                                 ball_dy = ball_dy - 2 * dot_product * ny
@@ -296,13 +304,14 @@ class Pinball:
                                 else:
                                     ball_dx *= self.settings.deadf_bounce
                                     ball_dy *= self.settings.deadf_bounce
+                                
                                 break
 
                     # Now check if line segment to next_x and next_y and current self.b.x, self.b.y intersects with flipper line, bounce
                     if not fcollision_occurred and distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
                         
                         # NEW: Segment intersection check (if no collision detected yet)
-                        if self.b.dy > 50 or abs(self.b.dx) > 50:
+                        if self.b.dy > 20 or abs(self.b.dx) > 20:
                             
                             
                             ball_radius = self.settings.br
@@ -348,10 +357,16 @@ class Pinball:
                                         # Position correction (push ball to edge)
                                         ball_x = intersect_x + nx * ball_radius
                                         ball_y = intersect_y + ny * ball_radius
+                                        print(f"Corrected by method 2 to {ball_x}, {ball_y}")
+                                        print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
+                                        self.b.x = ball_x
+                                        self.b.y = ball_y
+                                        position_corrected = True
+                                       
                                         
                                         # Calculate reflection
                                         dot = ball_dx * nx + ball_dy * ny
-                                        if dot < 0:  # Only bounce if moving toward flipper
+                                        if dot < 0 or position_corrected:  # Only bounce if moving toward flipper
                                             ball_dx = ball_dx - 2 * dot * nx
                                             ball_dy = ball_dy - 2 * dot * ny
                                             
@@ -372,6 +387,7 @@ class Pinball:
                 if fcollision_occurred:
                     self.b.x, self.b.y = ball_x, ball_y
                     self.b.dx, self.b.dy = ball_dx, ball_dy
+                
                                 
 
                                           
@@ -443,6 +459,7 @@ class Pinball:
                             correction = (min_distance - distance) / distance
                             self.b.x += distx * correction
                             self.b.y += disty * correction
+                            
 
                         # Calculate normal vector (from obstacle to ball)
                         if distance == 0:  # Handle exactly overlapping centers
@@ -490,7 +507,7 @@ class Pinball:
             
             self.draw_obs()
             self.draw_blocks()
-
+        
             self.b.draw_ball()
 
             self.fl.draw(self.screen)
