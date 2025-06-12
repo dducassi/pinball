@@ -223,7 +223,7 @@ class Pinball:
                         
 
                     # Calculate flipper endpoints
-                    end_x, end_y = f.get_end_pos
+                    end_x, end_y = f.get_end_pos()
                     
 
                     # Calculate flipper slope
@@ -347,7 +347,7 @@ class Pinball:
                                     # Calculate flipper normal vector
                                     flipper_vec_x = end_x - pivot_x
                                     flipper_vec_y = end_y - pivot_y
-                                    flen = math.hypot(flipper_vec_x, flipper_vec_y)
+                                    flen = f.length
                                     if flen > 0:
                                         fcollision_occurred = True
                                         nx = -flipper_vec_y / flen  # Perpendicular (normal)
