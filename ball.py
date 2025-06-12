@@ -32,7 +32,7 @@ class Ball():
 
     def move(self):
         # Move the ball according to its speed, minus friction decay
-        
+        max_speed = 30
         self.x += self.dx 
         self.y += self.dy 
 
@@ -48,6 +48,13 @@ class Ball():
         # Always fall
         if self.y <= self.settings.screen_height:
             self.dy += 0.1
+
+         # Cap the speed vector magnitude
+        speed = (self.dx ** 2 + self.dy ** 2) ** 0.5
+        if speed > max_speed:
+            scale = max_speed / speed
+            self.dx *= scale
+            self.dy *= scale
 
 
 
