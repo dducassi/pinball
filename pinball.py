@@ -226,7 +226,7 @@ class Pinball:
                         distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
                     
 
-                    if  distance_to_line < 2* ball_radius + math.hypot(ball_dx, ball_dy):
+                    if  distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
                         # Calculate closest point on flipper to ball
                         # (using vector projection)
                         flipper_vec_x = end_x - pivot_x
@@ -244,8 +244,7 @@ class Pinball:
                         dy = ball_y - closest_y
                         distance = math.sqrt(dx*dx + dy*dy)
                     
-                   
-                    
+    
                     
                         if distance <= ball_radius + 5: # Small tolerance #   or
                             fcollision_occurred = True
@@ -309,8 +308,8 @@ class Pinball:
                         line_x_at_ball = (self.b.y - c) / m
                         if self.b.x <= 100 + self.settings.br:
                             if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
-                                if self.b.y + self.settings.br >= line_y_at_ball:
-                                    self.b.y = line_y_at_ball - self.settings.br * math.sqrt(2)
+                                if self.b.y +  self.settings.br * 1.415 >= line_y_at_ball:
+                                    self.b.y = line_y_at_ball - self.settings.br
                                     if self.b.dx <= 0:
                                         self.b.dy, self.b.dx = -abs(self.b.dx) * self.settings.block_bounce, self.b.dy * self.settings.block_bounce
                                     else:
@@ -334,7 +333,7 @@ class Pinball:
                         line_y2_at_ball = m * self.b.x + c
                         if self.b.x > self.settings.screen_width - 100 - self.settings.br:
                             if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
-                                if self.b.y + self.settings.br * math.sqrt(2) >= line_y2_at_ball:
+                                if self.b.y + self.settings.br * 1.415 >= line_y2_at_ball:
                                     self.b.y = line_y2_at_ball - self.settings.br
                                     if self.b.dx <= 0:
                                         self.b.dy, self.b.dx = self.b.dx * self.settings.block_bounce, (-self.b.dy) * self.settings.block_bounce
