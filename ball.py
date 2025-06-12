@@ -32,12 +32,13 @@ class Ball():
 
     def move(self):
         # Move the ball according to its speed, minus friction decay
+        
         self.x += self.dx 
         self.y += self.dy 
 
         # Account for gravity and friction causing loss of inertia
-        self.dy += 0.0001 * (self.dy * -1)
-        self.dx += 0.0008 * (self.dx * -1)
+        self.dy += 0.0008 * (self.dy * -1)
+        
 
         # If ball is falling, accelerate y speed
         if self.dy > 0:
@@ -76,7 +77,7 @@ class Ball():
             self.y = self.settings.br
             self.dy = abs(0.8 * self.dy)
             self.dx = self.dx * 0.8
-        elif self.y >= self.settings.screen_height + 10:
+        elif self.y >= self.settings.screen_height + 1000:
             return True
         return False
     
