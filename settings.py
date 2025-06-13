@@ -13,6 +13,7 @@ class Settings:
 
         # Ball properties
         self.br = 10  # ball radius
+        self.phys_runs = 2
 
         # Block properties
         self.block_bounce = 0.8
@@ -49,7 +50,7 @@ class Settings:
     
     def init_dynamic_settings(self):
         self.bs = 5   # ball speed
-        self.bsmax = 16 # max ball speed
+        self.bsmax = 20 # max ball speed
 
 
 
