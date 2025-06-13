@@ -263,16 +263,17 @@ class Pinball:
                                     if not f.is_left:
                                         nx, ny = -nx, -ny
 
-                                    ball_x = intersect_x + nx * ball_radius
-                                    ball_y = intersect_y + ny * ball_radius
-
-                                    print(f"Corrected by method 2 to {ball_x}, {ball_y}")
-                                    print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
-
-                                    position_corrected = True
-
+                                    
                                     dot = ball_dx * nx + ball_dy * ny
                                     if dot < -1e-3:
+                                        ball_x = intersect_x + nx * ball_radius
+                                        ball_y = intersect_y + ny * ball_radius
+
+                                        print(f"Corrected by method 2 to {ball_x}, {ball_y}")
+                                        print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
+
+                                        position_corrected = True
+
                                         print(f"Distance to flipper: {distance:.3f}, velocity=({ball_dx:.3f}, {ball_dy:.3f}), dot={dot:.5f}")
                                         ball_dx = ball_dx - 2 * dot * nx
                                         ball_dy = ball_dy - 2 * dot * ny
