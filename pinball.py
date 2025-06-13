@@ -232,6 +232,7 @@ class Pinball:
                                 print(f"Ball dy: {ball_dy} at y: {ball_y}")
                                 print(f"Checking bounce: ball_dx={ball_dx:.2f}, ball_dy={ball_dy:.2f}, dot={dot_product:.2f}, normal=({nx:.2f}, {ny:.2f})")
                                 print(f"Dot product with normal: {dot_product}")
+                                break
 
                 # METHOD 2 collision detection - only if no previous collision correction
                 distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
@@ -295,6 +296,7 @@ class Pinball:
                                         print(f"Ball dy: {ball_dy} at y: {ball_y}")
                                         print(f"Checking bounce: ball_dx={ball_dx:.2f}, ball_dy={ball_dy:.2f}, dot={dot:.2f}, normal=({nx:.2f}, {ny:.2f})")
                                         print(f"Dot product with normal: {dot}")
+                                        break
 
         # --- Block collisions ---
         for block in self.blocks:
@@ -398,8 +400,9 @@ class Pinball:
                     obs.c = self.settings.red
                 print(f"Hit obstacle at {ox},{oy}, bounce velocity ({ball_dx},{ball_dy})")
 
-
-        if abs(next_y - ball_y) > 200 or abs(ball_dx - self.b.dx) > 100: # Sanity check
+        revised_next_y = ball_y + ball_dy
+        revised_next_x = ball_x + ball_dx
+        if abs(revised_next_y - ball_y) > 200 or abs(ball_dx - self.b.dx) > 100: # Sanity check
             print("⚠️ SUSPICIOUS movement detected!")
             print(f"Before: y={ball_y}, dy={self.b.dy}")
             print(f"After: y={next_y}, dy={ball_dy}")
@@ -508,7 +511,7 @@ class Pinball:
             self.fr.draw(self.screen)
         
             self.b.draw_ball()
-            
+
             self.draw_obs()
             self.draw_blocks()
            
