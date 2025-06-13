@@ -165,7 +165,7 @@ class Pinball:
                 projection = (to_ball_x * flipper_vec_x + to_ball_y * flipper_vec_y) / (length * length)
 
                 # Early skip if ball is far from flipper segment
-                if projection < -0.1 or projection > 1.1:
+                if projection < 0 or projection > 1:
                     continue
 
                 t = max(0, min(1, projection))
@@ -189,14 +189,7 @@ class Pinball:
 
                     if distance_to_line < ball_radius + velocity_magnitude:
                         if distance < ball_radius + velocity_magnitude and 0.05 < t < 0.95:
-                            epsilon = 0.5
-                            ball_x = closest_x + (dx / distance) * (ball_radius + epsilon)
-                            ball_y = closest_y + (dy / distance) * (ball_radius + epsilon)
-
-                            print(f"Corrected by method 1 to {ball_x}, {ball_y}")
-                            print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
-
-                            position_corrected = True
+                            
 
                             # Normal vector calculation
                             nx, ny = -flipper_vec_y / length, flipper_vec_x / length
@@ -211,6 +204,14 @@ class Pinball:
                             dot_product = ball_dx * nx + ball_dy * ny
 
                             if dot_product < -1e-3:
+                                epsilon = 0.5
+                                ball_x = closest_x + (dx / distance) * (ball_radius + epsilon)
+                                ball_y = closest_y + (dy / distance) * (ball_radius + epsilon)
+
+                                print(f"Corrected by method 1 to {ball_x}, {ball_y}")
+                                print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
+
+                                position_corrected = True
                                 ball_dx = ball_dx - 2 * dot_product * nx
                                 ball_dy = ball_dy - 2 * dot_product * ny
 
