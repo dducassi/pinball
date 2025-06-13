@@ -37,7 +37,7 @@ class Ball():
         self.y += self.dy 
 
         # Account for gravity and friction causing loss of inertia
-        self.dy += 0.0008 * (self.dy * -1)
+        self.dy += 0.0008 * abs(self.dy)
         
 
         # If ball is falling, accelerate y speed
@@ -62,10 +62,12 @@ class Ball():
         # Bounce off the left and right walls
         if self.x - self.settings.br <= 0:
             self.x = 0 + self.settings.br
+
             self.dx = abs(0.8 * self.dx)
             self.dy = self.dy * 0.8
         elif self.x >= self.settings.screen_width - self.settings.br:
             self.x = self.settings.screen_width - self.settings.br
+
             self.dx = -(abs(0.8 * self.dx))
             self.dy = self.dy * 0.8
         
@@ -82,9 +84,10 @@ class Ball():
         # Bounce off the top wall or signal game over if it hits the bottom
         if self.y <= self.settings.br:
             self.y = self.settings.br
+            
             self.dy = abs(0.8 * self.dy)
             self.dx = self.dx * 0.8
-        elif self.y >= self.settings.screen_height + 1000:
+        elif self.y >= self.settings.screen_height + 500:
             return True
         return False
     
