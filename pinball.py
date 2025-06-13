@@ -121,14 +121,15 @@ class Pinball:
         
 
     def ball_physics(self):
-        # Move flippers
+        
+        # Move flippers for fresh collision state
         self.fl.update()
         self.fr.update()
 
-        old_x, old_y = self.b.x, self.b.y
+        next_x = self.b.x + self.b.dx
+        next_y = self.b.y + self.b.dy
 
-        # Move the ball according to current velocity
-        self.b.move()
+        
 
         # Use local vars for ball position and velocity
         ball_x = self.b.x
@@ -237,8 +238,8 @@ class Pinball:
                 if not position_corrected and distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
                     velocity_mag = math.hypot(ball_dx, ball_dy)
                     if velocity_mag > 0.1:
-                        ball_seg_start = (old_x, old_y)
-                        ball_seg_end = (self.b.x, self.b.y)
+                        ball_seg_start = (self.b.x, self.b.y)
+                        ball_seg_end = (next_x, next_y)
                         flipper_seg_start = (pivot_x, pivot_y)
                         flipper_seg_end = (end_x, end_y)
 
@@ -398,10 +399,10 @@ class Pinball:
                 print(f"Hit obstacle at {ox},{oy}, bounce velocity ({ball_dx},{ball_dy})")
 
 
-        if abs(ball_y - old_y) > 200 or abs(ball_dx - self.b.dx) > 100: # Sanity check
+        if abs(next_y - ball_y) > 200 or abs(ball_dx - self.b.dx) > 100: # Sanity check
             print("⚠️ SUSPICIOUS movement detected!")
-            print(f"Before: y={old_y}, dy={self.b.dy}")
-            print(f"After: y={ball_y}, dy={ball_dy}")
+            print(f"Before: y={ball_y}, dy={self.b.dy}")
+            print(f"After: y={next_y}, dy={ball_dy}")
 
         # Update the ball's position and velocity once after all collisions
         self.b.x = ball_x
@@ -417,7 +418,13 @@ class Pinball:
             time.sleep(1.5)
             self.b.reset()
             self.score = 0  # Reset score on game over
-                
+        
+        
+
+        # Move the ball according to current velocity
+        self.b.move() # Split off gravity and speed clamping, ideally
+
+
         
 
     
