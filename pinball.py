@@ -502,15 +502,15 @@ class Pinball:
                 
 
             # Draw game elements
+
             
+            self.fl.draw(self.screen)
+            self.fr.draw(self.screen)
+        
+            self.b.draw_ball()
             
             self.draw_obs()
             self.draw_blocks()
-        
-            self.b.draw_ball()
-
-            self.fl.draw(self.screen)
-            self.fr.draw(self.screen)
            
             
 
