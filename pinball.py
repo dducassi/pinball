@@ -157,30 +157,38 @@ class Pinball:
                 flipper_slope = (end_y - pivot_y) / (end_x - pivot_x)
                 flipper_intercept = pivot_y - flipper_slope * pivot_x
 
+                flipper_vec_x = end_x - pivot_x
+                flipper_vec_y = end_y - pivot_y
+                to_ball_x = ball_x - pivot_x
+                to_ball_y = ball_y - pivot_y
+
+                projection = (to_ball_x * flipper_vec_x + to_ball_y * flipper_vec_y) / (length * length)
+
+                # Early skip if ball is far from flipper segment
+                if projection < -0.1 or projection > 1.1:
+                    continue
+
+                t = max(0, min(1, projection))
+                closest_x = pivot_x + t * flipper_vec_x
+                closest_y = pivot_y + t * flipper_vec_y
+
+                dx = ball_x - closest_x
+                dy = ball_y - closest_y
+                distance = math.sqrt(dx * dx + dy * dy)
+
                 ball_relative_y = ball_y - (flipper_slope * ball_x + flipper_intercept)
+
+                flipper_zone_padding = 100  # tweakable
+                if not (pivot_y - flipper_zone_padding <= ball_y <= pivot_y + flipper_zone_padding):
+                    continue
 
                 # METHOD 1 collision detection
                 if (f.is_left and ball_relative_y < ball_radius) or (not f.is_left and ball_relative_y > -ball_radius):
-                    self.distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
+                    distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
                     velocity_magnitude = math.hypot(ball_dx, ball_dy)
 
-                    if self.distance_to_line < ball_radius + velocity_magnitude:
-                        # Vector projection for closest point on flipper
-                        flipper_vec_x = end_x - pivot_x
-                        flipper_vec_y = end_y - pivot_y
-                        to_ball_x = ball_x - pivot_x
-                        to_ball_y = ball_y - pivot_y
-
-                        projection = (to_ball_x * flipper_vec_x + to_ball_y * flipper_vec_y) / (length * length)
-                        t = max(0, min(1, projection))
-                        closest_x = pivot_x + t * flipper_vec_x
-                        closest_y = pivot_y + t * flipper_vec_y
-
-                        dx = ball_x - closest_x
-                        dy = ball_y - closest_y
-                        distance = math.sqrt(dx*dx + dy*dy)
-
-                        if distance < ball_radius + 1:
+                    if distance_to_line < ball_radius + velocity_magnitude:
+                        if distance < ball_radius and 0.05 < t < 0.95:
                             epsilon = 0.5
                             ball_x = closest_x + (dx / distance) * (ball_radius + epsilon)
                             ball_y = closest_y + (dy / distance) * (ball_radius + epsilon)
@@ -213,68 +221,77 @@ class Pinball:
                                     ball_dx *= self.settings.deadf_bounce
                                     ball_dy *= self.settings.deadf_bounce
 
+                                min_velocity = 0.5
+                                if abs(ball_dx) < min_velocity and abs(ball_dy) < min_velocity:
+                                    ball_dx = min_velocity * (1 if ball_dx > 0 else -1)
+                                    ball_dy = min_velocity * (1 if ball_dy > 0 else -1)
+
                                 print(f"BOUNCED by method 1")
                                 print(f"Ball dy: {ball_dy} at y: {ball_y}")
                                 print(f"Checking bounce: ball_dx={ball_dx:.2f}, ball_dy={ball_dy:.2f}, dot={dot_product:.2f}, normal=({nx:.2f}, {ny:.2f})")
                                 print(f"Dot product with normal: {dot_product}")
 
                 # METHOD 2 collision detection - only if no previous collision correction
-                if not position_corrected and self.distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
-                    if ball_dy > 20 or abs(ball_dx) > 20:
-                        ball_radius = self.settings.br
-
+                distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
+                if not position_corrected and distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
+                    velocity_mag = math.hypot(ball_dx, ball_dy)
+                    if velocity_mag > 20:
                         ball_seg_start = (old_x, old_y)
                         ball_seg_end = (self.b.x, self.b.y)
                         flipper_seg_start = (pivot_x, pivot_y)
                         flipper_seg_end = (end_x, end_y)
 
-                        denom = ((ball_seg_end[0] - ball_seg_start[0]) * (flipper_seg_end[1] - flipper_seg_start[1]) - 
+                        denom = ((ball_seg_end[0] - ball_seg_start[0]) * (flipper_seg_end[1] - flipper_seg_start[1]) -
                                 (ball_seg_end[1] - ball_seg_start[1]) * (flipper_seg_end[0] - flipper_seg_start[0]))
 
                         if abs(denom) > 1e-10:
-                            t = ((ball_seg_start[0] - flipper_seg_start[0]) * (flipper_seg_end[1] - flipper_seg_start[1]) - 
+                            t = ((ball_seg_start[0] - flipper_seg_start[0]) * (flipper_seg_end[1] - flipper_seg_start[1]) -
                                 (ball_seg_start[1] - flipper_seg_start[1]) * (flipper_seg_end[0] - flipper_seg_start[0])) / denom
-                            u = -((ball_seg_start[0] - ball_seg_end[0]) * (ball_seg_start[1] - flipper_seg_start[1]) - 
+                            u = -((ball_seg_start[0] - ball_seg_end[0]) * (ball_seg_start[1] - flipper_seg_start[1]) -
                                 (ball_seg_start[1] - ball_seg_end[1]) * (ball_seg_start[0] - flipper_seg_start[0])) / denom
 
                             if 0 <= t <= 1 and 0 <= u <= 1:
                                 intersect_x = ball_seg_start[0] + t * (ball_seg_end[0] - ball_seg_start[0])
                                 intersect_y = ball_seg_start[1] + t * (ball_seg_end[1] - ball_seg_start[1])
 
-                                flipper_vec_x = end_x - pivot_x
-                                flipper_vec_y = end_y - pivot_y
-                                flen = f.length
+                                # Check that intersection point projects on flipper segment (u similar to projection)
+                                if -0.1 <= u <= 1.1:
+                                    flen = f.length
+                                    nx = -flipper_vec_y / flen
+                                    ny = flipper_vec_x / flen
+                                    if not f.is_left:
+                                        nx, ny = -nx, -ny
 
-                                nx = -flipper_vec_y / flen
-                                ny = flipper_vec_x / flen
-                                if not f.is_left:
-                                    nx, ny = -nx, -ny
+                                    ball_x = intersect_x + nx * ball_radius
+                                    ball_y = intersect_y + ny * ball_radius
 
-                                ball_x = intersect_x + nx * ball_radius
-                                ball_y = intersect_y + ny * ball_radius
+                                    print(f"Corrected by method 2 to {ball_x}, {ball_y}")
+                                    print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
 
-                                print(f"Corrected by method 2 to {ball_x}, {ball_y}")
-                                print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
+                                    position_corrected = True
 
-                                position_corrected = True
+                                    dot = ball_dx * nx + ball_dy * ny
+                                    if dot < -1e-3:
+                                        print(f"Distance to flipper: {distance:.3f}, velocity=({ball_dx:.3f}, {ball_dy:.3f}), dot={dot:.5f}")
+                                        ball_dx = ball_dx - 2 * dot * nx
+                                        ball_dy = ball_dy - 2 * dot * ny
 
-                                dot = ball_dx * nx + ball_dy * ny
-                                if dot < -1e-3:
-                                    print(f"Distance to flipper: {distance:.3f}, velocity=({ball_dx:.3f}, {ball_dy:.3f}), dot={dot:.5f}")
-                                    ball_dx = ball_dx - 2 * dot * nx
-                                    ball_dy = ball_dy - 2 * dot * ny
+                                        if f.active:
+                                            ball_dx *= self.settings.flip_force
+                                            ball_dy *= self.settings.flip_force
+                                        else:
+                                            ball_dx *= self.settings.deadf_bounce
+                                            ball_dy *= self.settings.deadf_bounce
 
-                                    if f.active:
-                                        ball_dx *= self.settings.flip_force
-                                        ball_dy *= self.settings.flip_force
-                                    else:
-                                        ball_dx *= self.settings.deadf_bounce
-                                        ball_dy *= self.settings.deadf_bounce
+                                        min_velocity = 0.5
+                                        if abs(ball_dx) < min_velocity and abs(ball_dy) < min_velocity:
+                                            ball_dx = min_velocity * (1 if ball_dx > 0 else -1)
+                                            ball_dy = min_velocity * (1 if ball_dy > 0 else -1)
 
-                                    print(f"BOUNCED by method 2")
-                                    print(f"Ball dy: {ball_dy} at y: {ball_y}")
-                                    print(f"Checking bounce: ball_dx={ball_dx:.2f}, ball_dy={ball_dy:.2f}, dot={dot:.2f}, normal=({nx:.2f}, {ny:.2f})")
-                                    print(f"Dot product with normal: {dot}")
+                                        print(f"BOUNCED by method 2")
+                                        print(f"Ball dy: {ball_dy} at y: {ball_y}")
+                                        print(f"Checking bounce: ball_dx={ball_dx:.2f}, ball_dy={ball_dy:.2f}, dot={dot:.2f}, normal=({nx:.2f}, {ny:.2f})")
+                                        print(f"Dot product with normal: {dot}")
 
         # --- Block collisions ---
         for block in self.blocks:
@@ -378,6 +395,12 @@ class Pinball:
                     obs.c = self.settings.red
                 print(f"Hit obstacle at {ox},{oy}, bounce velocity ({ball_dx},{ball_dy})")
 
+
+        if abs(ball_y - old_y) > 200 or abs(ball_dx - self.b.dx) > 100: # Sanity check
+            print("⚠️ SUSPICIOUS movement detected!")
+            print(f"Before: y={old_y}, dy={self.b.dy}")
+            print(f"After: y={ball_y}, dy={ball_dy}")
+
         # Update the ball's position and velocity once after all collisions
         self.b.x = ball_x
         self.b.y = ball_y
@@ -385,6 +408,7 @@ class Pinball:
         self.b.dy = ball_dy
 
         print(f"FINAL updated ball position: ({self.b.x}, {self.b.y}), velocity: ({self.b.dx}, {self.b.dy})")
+        
 
         # Reset ball if out of bounds or collision condition met
         if self.b.check_collision():
@@ -457,8 +481,12 @@ class Pinball:
             # If game is running, not paused
             if running and not paused:
 
-                self.ball_physics()
-                self.ball_physics()
+                for i in range(self.settings.phys_runs):
+                    self.ball_physics()
+
+                
+                
+                
 
                 
                 
@@ -489,7 +517,7 @@ class Pinball:
 
 
             # Control the frame rate
-            pygame.time.Clock().tick(60)
+            pygame.time.Clock().tick(30)
 
 if __name__ == '__main__':
     # Make a game instance and run the game.
