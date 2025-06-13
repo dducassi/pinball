@@ -121,319 +121,276 @@ class Pinball:
         
 
     def ball_physics(self):
-
-    # Move the ball and check for wall collisions
+        # Move flippers
         self.fl.update()
         self.fr.update()
 
-
-        # Save old position
         old_x, old_y = self.b.x, self.b.y
 
-        # Then move ball
+        # Move the ball according to current velocity
         self.b.move()
-                
-            
-        # Find closest point on flipper to ball
 
+        # Use local vars for ball position and velocity
         ball_x = self.b.x
         ball_y = self.b.y
         ball_dx = self.b.dx
         ball_dy = self.b.dy
         ball_radius = self.settings.br
-        position_corrected = False
-        fcollision_occurred = False
 
+        position_corrected = False
+
+        # --- Flipper collisions ---
         for f in self.flippers:
-            
-            # Get flipper properties
             pivot_x, pivot_y = f.pivot
             angle = f.angle
             length = f.length
 
-            if f == self.fl:
-                if angle < -0.5:
-                    f.active = False
-            elif f == self.fr:
-                if angle > 0.5:
-                    f.active = False
-                        
+            if f == self.fl and angle < -0.5:
+                f.active = False
+            elif f == self.fr and angle > 0.5:
+                f.active = False
 
-            # Calculate flipper endpoints
             end_x, end_y = f.get_end_pos()
-                    
 
-            # Calculate flipper slope
-            if abs(end_x - pivot_x) > 0:  # Avoid division by zero
+            # Avoid division by zero for slope calculation
+            if abs(end_x - pivot_x) > 1e-10:
                 flipper_slope = (end_y - pivot_y) / (end_x - pivot_x)
                 flipper_intercept = pivot_y - flipper_slope * pivot_x
-                        
-                # Calculate ball's position relative to flipper line
+
                 ball_relative_y = ball_y - (flipper_slope * ball_x + flipper_intercept)
-                    
-                # Check if ball is crossing the flipper line
-                # METHOD 1
+
+                # METHOD 1 collision detection
                 if (f.is_left and ball_relative_y < ball_radius) or (not f.is_left and ball_relative_y > -ball_radius):
-                    # Calculate distance from ball to flipper line
                     self.distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
-                    
-                    if  self.distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
-                        # Calculate closest point on flipper to ball
-                        # (using vector projection)
+                    velocity_magnitude = math.hypot(ball_dx, ball_dy)
+
+                    if self.distance_to_line < ball_radius + velocity_magnitude:
+                        # Vector projection for closest point on flipper
                         flipper_vec_x = end_x - pivot_x
                         flipper_vec_y = end_y - pivot_y
                         to_ball_x = ball_x - pivot_x
                         to_ball_y = ball_y - pivot_y
-                        
+
                         projection = (to_ball_x * flipper_vec_x + to_ball_y * flipper_vec_y) / (length * length)
                         t = max(0, min(1, projection))
                         closest_x = pivot_x + t * flipper_vec_x
                         closest_y = pivot_y + t * flipper_vec_y
-                    
-                        # Calculate actual distance to flipper segment
+
                         dx = ball_x - closest_x
                         dy = ball_y - closest_y
                         distance = math.sqrt(dx*dx + dy*dy)
-                    
-    
-                        if distance < ball_radius + 1: # Small tolerance # Collision Occurred!
-                            
-                        
-                            
+
+                        if distance < ball_radius + 1:
                             epsilon = 0.5
                             ball_x = closest_x + (dx / distance) * (ball_radius + epsilon)
                             ball_y = closest_y + (dy / distance) * (ball_radius + epsilon)
-                                
+
                             print(f"Corrected by method 1 to {ball_x}, {ball_y}")
                             print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
-                            
-                            fcollision_occurred = True
+
                             position_corrected = True
-                            
-                            # Calculate normal vector
-                            nx, ny = -flipper_vec_y/length, flipper_vec_x/length  # Perpendicular
+
+                            # Normal vector calculation
+                            nx, ny = -flipper_vec_y / length, flipper_vec_x / length
                             if not f.is_left:
-                                nx, ny = -nx, -ny  # Flip for right flipper
-                            
-                            
-                            
-                            # Ensure normal faces toward ball
+                                nx, ny = -nx, -ny
+
+                            # Ensure normal points toward ball
                             dot_to_ball = (ball_x - closest_x) * nx + (ball_y - closest_y) * ny
                             if dot_to_ball < 0:
                                 nx, ny = -nx, -ny
-                            
-                            # Calculate velocity dot product with normal
+
                             dot_product = ball_dx * nx + ball_dy * ny
-                            
-                            # Only bounce if ball hit
-                            if position_corrected and dot_product < 0:
-                                # Calculate reflection
+
+                            if dot_product < -1e-3:
                                 ball_dx = ball_dx - 2 * dot_product * nx
                                 ball_dy = ball_dy - 2 * dot_product * ny
-                                
-                                # Apply energy loss/boost based on flipper state
+
                                 if f.active:
                                     ball_dx *= self.settings.flip_force
                                     ball_dy *= self.settings.flip_force
                                 else:
                                     ball_dx *= self.settings.deadf_bounce
                                     ball_dy *= self.settings.deadf_bounce
-                                print(f"BOUNCED by method 1")
-                                print(f"Ball dy: {self.b.dy} at y: {self.b.y}")
-                                
 
-                # Now check if line segment to next_x and next_y and current self.b.x, self.b.y intersects with flipper line, bounce
-                # METHOD 2
-                if not fcollision_occurred and self.distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
-                        
-                     # Segment intersection check (if no collision detected yet)
-                    if self.b.dy > 20 or abs(self.b.dx) > 20:
-                            
+                                print(f"BOUNCED by method 1")
+                                print(f"Ball dy: {ball_dy} at y: {ball_y}")
+                                print(f"Checking bounce: ball_dx={ball_dx:.2f}, ball_dy={ball_dy:.2f}, dot={dot_product:.2f}, normal=({nx:.2f}, {ny:.2f})")
+                                print(f"Dot product with normal: {dot_product}")
+
+                # METHOD 2 collision detection - only if no previous collision correction
+                if not position_corrected and self.distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
+                    if ball_dy > 20 or abs(ball_dx) > 20:
                         ball_radius = self.settings.br
-    
-                        # Define ball path segment (current to next position)
+
                         ball_seg_start = (old_x, old_y)
                         ball_seg_end = (self.b.x, self.b.y)
-                            
-                        # Define flipper segment
                         flipper_seg_start = (pivot_x, pivot_y)
                         flipper_seg_end = (end_x, end_y)
-                            
-                        # Calculate intersection
+
                         denom = ((ball_seg_end[0] - ball_seg_start[0]) * (flipper_seg_end[1] - flipper_seg_start[1]) - 
-                            (ball_seg_end[1] - ball_seg_start[1]) * (flipper_seg_end[0] - flipper_seg_start[0]))
-                            
-                        if abs(denom) > 1e-10:  # Not parallel
-                                
-                            ball_dx, ball_dy = self.b.dx, self.b.dy
+                                (ball_seg_end[1] - ball_seg_start[1]) * (flipper_seg_end[0] - flipper_seg_start[0]))
+
+                        if abs(denom) > 1e-10:
                             t = ((ball_seg_start[0] - flipper_seg_start[0]) * (flipper_seg_end[1] - flipper_seg_start[1]) - 
                                 (ball_seg_start[1] - flipper_seg_start[1]) * (flipper_seg_end[0] - flipper_seg_start[0])) / denom
                             u = -((ball_seg_start[0] - ball_seg_end[0]) * (ball_seg_start[1] - flipper_seg_start[1]) - 
                                 (ball_seg_start[1] - ball_seg_end[1]) * (ball_seg_start[0] - flipper_seg_start[0])) / denom
-                                
-                            if 0 <= t <= 1 and 0 <= u <= 1:  # Segments intersect
-                                # Calculate exact intersection point
+
+                            if 0 <= t <= 1 and 0 <= u <= 1:
                                 intersect_x = ball_seg_start[0] + t * (ball_seg_end[0] - ball_seg_start[0])
                                 intersect_y = ball_seg_start[1] + t * (ball_seg_end[1] - ball_seg_start[1])
-                                    
-                                # Calculate flipper normal vector
+
                                 flipper_vec_x = end_x - pivot_x
                                 flipper_vec_y = end_y - pivot_y
                                 flen = f.length
-                                
-                                nx = -flipper_vec_y / flen  # Perpendicular (normal)
+
+                                nx = -flipper_vec_y / flen
                                 ny = flipper_vec_x / flen
                                 if not f.is_left:
-                                    nx, ny = -nx, -ny  # Flip normal for right flipper
-                                        
-                                # Position correction (push ball to edge)
+                                    nx, ny = -nx, -ny
+
                                 ball_x = intersect_x + nx * ball_radius
                                 ball_y = intersect_y + ny * ball_radius
+
                                 print(f"Corrected by method 2 to {ball_x}, {ball_y}")
                                 print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
-                                
-                                fcollision_occurred = True
+
                                 position_corrected = True
-                                       
-                                        
-                                # Calculate reflection
+
                                 dot = ball_dx * nx + ball_dy * ny
-                                if position_corrected and dot < 0:  # Only bounce if ball hit
+                                if dot < -1e-3:
+                                    print(f"Distance to flipper: {distance:.3f}, velocity=({ball_dx:.3f}, {ball_dy:.3f}), dot={dot:.5f}")
                                     ball_dx = ball_dx - 2 * dot * nx
                                     ball_dy = ball_dy - 2 * dot * ny
-                                            
-                                    # Apply force multipliers
+
                                     if f.active:
                                         ball_dx *= self.settings.flip_force
                                         ball_dy *= self.settings.flip_force
                                     else:
                                         ball_dx *= self.settings.deadf_bounce
                                         ball_dy *= self.settings.deadf_bounce
-                                        
+
                                     print(f"BOUNCED by method 2")
-                                    print(f"Ball dy: {self.b.dy} at y: {self.b.y}")
-                                        
+                                    print(f"Ball dy: {ball_dy} at y: {ball_y}")
+                                    print(f"Checking bounce: ball_dx={ball_dx:.2f}, ball_dy={ball_dy:.2f}, dot={dot:.2f}, normal=({nx:.2f}, {ny:.2f})")
+                                    print(f"Dot product with normal: {dot}")
 
+        # --- Block collisions ---
+        for block in self.blocks:
+        
+            # Extract points for convenience
+            x1, y1 = block.x1, block.y1
+            x2, y2 = block.x2, block.y2
+            x3, y3 = block.x3, block.y3
+            x4, y4 = block.x4, block.y4
+            bounce = self.settings.block_bounce
+            ball_diag = ball_radius * 1.415  # diagonal radius approx sqrt(2)*radius
 
-                # Update ball state if collision occurred
-                if fcollision_occurred:
-                    self.b.x, self.b.y = ball_x, ball_y
-                    self.b.dx, self.b.dy = ball_dx, ball_dy
-                    print(f"updated ball xy: {self.b.x, self.b.y}")
-                    
-                    
-                
+            if block is self.blocks[0]:
+                # Left lower block slope line (x2,y2) to (x3,y3)
+                m = (y3 - y2) / (x3 - x2)
+                c = y2 - m * x2
 
+                line_y_at_ball = m * ball_x + c
 
-                # Check for collision with blocks
-                for block in self.blocks:
-                    if block is self.blocks[0]:
-                        slope_start = block.x2, block.y2 
-                        slope_end = block.x3, block.y3
-                        # Calculate slope: y = mx + c
-                        m = (block.y3 - block.y2) / (block.x3 - block.x2)
-                        c =  block.y2 - m * block.x2
+                # Check collision with slope
+                if ball_x <= x3 + ball_radius:
+                    if ball_y >= self.settings.screen_height - (155 + ball_radius):
+                        if ball_y + ball_diag >= line_y_at_ball:
+                            ball_y = line_y_at_ball - ball_diag
+                            if ball_dx <= 0:
+                                ball_dy, ball_dx = -abs(ball_dx) * bounce, ball_dy * bounce
+                            else:
+                                ball_dy, ball_dx = -ball_dx * bounce, ball_dy * bounce
+                            position_corrected = True
 
-                        # Check if ball is below the left slope
-                        line_y_at_ball = m * self.b.x + c
-                        line_x_at_ball = (self.b.y - c) / m
-                        if self.b.x <= 100 + self.settings.br:
-                            if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
-                                if self.b.y +  self.settings.br * 1.415 >= line_y_at_ball:
-                                    self.b.y = line_y_at_ball - self.settings.br * 1.415
-                                    if self.b.dx <= 0:
-                                        self.b.dy, self.b.dx = -abs(self.b.dx) * self.settings.block_bounce, self.b.dy * self.settings.block_bounce
-                                    else:
-                                        self.b.dy, self.b.dx = -(self.b.dx) * self.settings.block_bounce, self.b.dy * self.settings.block_bounce
+                # Left vertical wall (x=0)
+                if ball_x <= ball_radius:
+                    if ball_y >= y2:  # y2 is upper y of vertical wall
+                        ball_x = ball_radius
+                        if ball_dx < 0:
+                            ball_dx = -ball_dx * bounce
+                        position_corrected = True
 
+            elif block is self.blocks[1]:
+                # Right lower block slope line (x2,y2) to (x3,y3)
+                m = (y3 - y2) / (x3 - x2)
+                c = y2 - m * x2
 
-                        else:
-                            # If below flippers, bounce right
-                            if self.b.dy > self.settings.screen_height - 10:
-                                if self.b.dx - self.settings.br <= 100:
-                                    self.b.dx = -0.8 * self.b.dx
-                                if self.b.dx + self.settings.br <= 100:
-                                    self.b.dx = -0.8 * self.b.dx
-                        
-                    if block is self.blocks[1]:
-                        slope_start = block.x2, block.y2 
-                        slope_end = block.x3, block.y3
-                        # Calculate slope: y = mx + c
-                        m =  (block.y3 - block.y2) / (block.x3 - block.x2)
-                        c =  block.y2 - m * block.x2
-                        line_y2_at_ball = m * self.b.x + c
-                        if self.b.x > self.settings.screen_width - 100 - self.settings.br:
-                            if self.b.y >= self.settings.screen_height - (155 + self.settings.br):
-                                if self.b.y + self.settings.br * 1.415 >= line_y2_at_ball:
-                                    self.b.y = line_y2_at_ball - self.settings.br * 1.415
-                                    if self.b.dx <= 0:
-                                        self.b.dy, self.b.dx = self.b.dx * self.settings.block_bounce, (-self.b.dy) * self.settings.block_bounce
-                                    elif self.b.dx > 0:
-                                        if self.b.dy <= 0:
-                                            self.b.dy, self.b.dx = -self.b.dx * self.settings.block_bounce, self.b.dy * self.settings.block_bounce
-                                        if self.b.dy > 0:
-                                            self.b.dy, self.b.dx = (-self.b.dx) * self.settings.block_bounce, (-self.b.dy) * self.settings.block_bounce
-                                                             
-                                    
+                line_y_at_ball = m * ball_x + c
 
-                # Check for collisions with obstacles
-                for ob in self.obs:
-                    # Circular collision detection
-                    # If ball's x is within obstacle's radius
-                    distx = self.b.x - ob.x
-                    disty = self.b.y - ob.y
-                    distance = math.sqrt(distx**2 + disty**2) # a^2 + b^2 = c^2
-                    min_distance = self.settings.orad + self.settings.br
-                    
-                    if distance < min_distance:
-                        # Fix Location:
-                        if distance > 0:
-                            correction = (min_distance - distance) / distance
-                            self.b.x += distx * correction
-                            self.b.y += disty * correction
-                            
+                # Check collision with slope
+                if ball_x >= x3 - ball_radius:
+                    if ball_y >= self.settings.screen_height - (155 + ball_radius):
+                        if ball_y + ball_diag >= line_y_at_ball:
+                            ball_y = line_y_at_ball - ball_diag
+                            if ball_dx >= 0:
+                                ball_dy, ball_dx = ball_dx * bounce, -ball_dy * bounce
+                            else:
+                                if ball_dy <= 0:
+                                    ball_dy, ball_dx = -ball_dx * bounce, ball_dy * bounce
+                                else:
+                                    ball_dy, ball_dx = -ball_dx * bounce, -ball_dy * bounce
+                            position_corrected = True
 
-                        # Calculate normal vector (from obstacle to ball)
-                        if distance == 0:  # Handle exactly overlapping centers
-                            nx, ny = 1, 0
+                # Right vertical wall (x=screen_width)
+                if ball_x >= self.settings.screen_width - ball_radius:
+                    if ball_y >= y2:
+                        ball_x = self.settings.screen_width - ball_radius
+                        if ball_dx > 0:
+                            ball_dx = -ball_dx * bounce
+                        position_corrected = True
 
-                        else:
-                            nx = distx / distance  # Normalized vector from obstacle to ball
-                            ny = disty / distance
-            
-                        # Original velocity components
-                        dx_old, dy_old = self.b.dx, self.b.dy
-                            
-                        # Compute dot product (v · n)
-                        dot_product = dx_old * nx + dy_old * ny
-                       
-                            
-                            
-                        if dot_product < 0:
-                            # Simplified reflection (normalized vector)
-                            self.b.dx = self.b.dx - 2 * dot_product * nx
-                            self.b.dy = self.b.dy - 2 * dot_product * ny
+        # --- Obstacle collisions ---
+        for obs in self.obs:
+            ox, oy = obs.x, obs.y
+            orad = self.settings.orad
 
-                        # Update velocity with reflection
-                        self.b.dx *= self.settings.obs_bounce
-                        self.b.dy *= self.settings.obs_bounce
+            dx = ball_x - ox
+            dy = ball_y - oy
+            dist = math.sqrt(dx*dx + dy*dy)
 
-                        self.increment_score() 
-                        if ob.c == self.settings.red:
-                            ob.c = self.settings.blu
-                        elif ob.c == self.settings.blu:
-                            ob.c = self.settings.ylw
-                        elif ob.c == self.settings.ylw:
-                            ob.c = self.settings.red
-                        
-                        
-                
-                if self.b.check_collision():
-                        time.sleep(1.5)
-                        self.b.reset()
-                        score = 0  # Reset score when the game is over
-                
-                print(f"FINAL: {self.b.x, self.b.y}")
+            if dist < ball_radius + orad:
+                # Correct ball position outside the obstacle
+                epsilon = 0.5
+                ball_x = ox + (dx / dist) * (ball_radius + orad + epsilon)
+                ball_y = oy + (dy / dist) * (ball_radius + orad + epsilon)
+
+                # Bounce the ball off the obstacle surface
+                nx = dx / dist
+                ny = dy / dist
+                dot = ball_dx * nx + ball_dy * ny
+
+                if dot < -1e-3:
+                    ball_dx = ball_dx - 2 * dot * nx
+                    ball_dy = ball_dy - 2 * dot * ny
+
+                    ball_dx *= self.settings.obs_bounce
+                    ball_dy *= self.settings.obs_bounce
+
+                self.increment_score() 
+                if obs.c == self.settings.red:
+                    obs.c = self.settings.blu
+                elif obs.c == self.settings.blu:
+                    obs.c = self.settings.ylw
+                elif obs.c == self.settings.ylw:
+                    obs.c = self.settings.red
+                print(f"Hit obstacle at {ox},{oy}, bounce velocity ({ball_dx},{ball_dy})")
+
+        # Update the ball's position and velocity once after all collisions
+        self.b.x = ball_x
+        self.b.y = ball_y
+        self.b.dx = ball_dx
+        self.b.dy = ball_dy
+
+        print(f"FINAL updated ball position: ({self.b.x}, {self.b.y}), velocity: ({self.b.dx}, {self.b.dy})")
+
+        # Reset ball if out of bounds or collision condition met
+        if self.b.check_collision():
+            time.sleep(1.5)
+            self.b.reset()
+            self.score = 0  # Reset score on game over
                 
         
 
