@@ -34,8 +34,8 @@ class Ball():
 
         # Cap the speed vector magnitude
         speed = (self.dx ** 2 + self.dy ** 2) ** 0.5
-        if speed > max_speed:
-            scale = max_speed / speed
+        if speed > self.settings.bsmax:
+            scale = self.settings.bsmax / speed
             self.dx *= scale
             self.dy *= scale
 
