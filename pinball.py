@@ -188,7 +188,7 @@ class Pinball:
                     velocity_magnitude = math.hypot(ball_dx, ball_dy)
 
                     if distance_to_line < ball_radius + velocity_magnitude:
-                        if distance < ball_radius and 0.05 < t < 0.95:
+                        if distance < ball_radius + velocity_magnitude and 0.05 < t < 0.95:
                             epsilon = 0.5
                             ball_x = closest_x + (dx / distance) * (ball_radius + epsilon)
                             ball_y = closest_y + (dy / distance) * (ball_radius + epsilon)
@@ -235,7 +235,7 @@ class Pinball:
                 distance_to_line = abs(ball_relative_y) / math.sqrt(flipper_slope**2 + 1)
                 if not position_corrected and distance_to_line < ball_radius + math.hypot(ball_dx, ball_dy):
                     velocity_mag = math.hypot(ball_dx, ball_dy)
-                    if velocity_mag > 20:
+                    if velocity_mag > 0.1:
                         ball_seg_start = (old_x, old_y)
                         ball_seg_end = (self.b.x, self.b.y)
                         flipper_seg_start = (pivot_x, pivot_y)
@@ -250,7 +250,7 @@ class Pinball:
                             u = -((ball_seg_start[0] - ball_seg_end[0]) * (ball_seg_start[1] - flipper_seg_start[1]) -
                                 (ball_seg_start[1] - ball_seg_end[1]) * (ball_seg_start[0] - flipper_seg_start[0])) / denom
 
-                            if 0 <= t <= 1 and 0 <= u <= 1:
+                            if 0 <= t <= 1 and 0 <= u <= 1: # Line intersection
                                 intersect_x = ball_seg_start[0] + t * (ball_seg_end[0] - ball_seg_start[0])
                                 intersect_y = ball_seg_start[1] + t * (ball_seg_end[1] - ball_seg_start[1])
 
