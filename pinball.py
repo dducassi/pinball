@@ -196,19 +196,19 @@ class Pinball:
                         distance = math.sqrt(dx*dx + dy*dy)
                     
     
-                        if distance < ball_radius * 1.415: # Small tolerance # 
-                            fcollision_occurred = True
+                        if distance < ball_radius + 1: # Small tolerance # Collision Occurred!
+                            
                         
-                            # Position correction to prevent sinking + epsilon push away
-                            if distance > 0:  # Avoid division by zero
-                                epsilon = 0.5
-                                ball_x = closest_x + (dx / distance) * (ball_radius + epsilon)
-                                ball_y = closest_y + (dy / distance) * (ball_radius + epsilon)
+                            
+                            epsilon = 0.5
+                            ball_x = closest_x + (dx / distance) * (ball_radius + epsilon)
+                            ball_y = closest_y + (dy / distance) * (ball_radius + epsilon)
                                 
-                                print(f"Corrected by method 1 to {ball_x}, {ball_y}")
-                                print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
-
-                                position_corrected = True
+                            print(f"Corrected by method 1 to {ball_x}, {ball_y}")
+                            print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
+                            
+                            fcollision_occurred = True
+                            position_corrected = True
                             
                             # Calculate normal vector
                             nx, ny = -flipper_vec_y/length, flipper_vec_x/length  # Perpendicular
@@ -225,8 +225,8 @@ class Pinball:
                             # Calculate velocity dot product with normal
                             dot_product = ball_dx * nx + ball_dy * ny
                             
-                            # Only bounce if moving toward flipper
-                            if dot_product < 0 or position_corrected:
+                            # Only bounce if ball hit
+                            if position_corrected and dot_product < 0:
                                 # Calculate reflection
                                 ball_dx = ball_dx - 2 * dot_product * nx
                                 ball_dy = ball_dy - 2 * dot_product * ny
@@ -239,7 +239,8 @@ class Pinball:
                                     ball_dx *= self.settings.deadf_bounce
                                     ball_dy *= self.settings.deadf_bounce
                                 print(f"BOUNCED by method 1")
-                                break
+                                print(f"Ball dy: {self.b.dy} at y: {self.b.y}")
+                                
 
                 # Now check if line segment to next_x and next_y and current self.b.x, self.b.y intersects with flipper line, bounce
                 # METHOD 2
@@ -279,44 +280,48 @@ class Pinball:
                                 flipper_vec_x = end_x - pivot_x
                                 flipper_vec_y = end_y - pivot_y
                                 flen = f.length
-                                if flen > 0:
-                                    fcollision_occurred = True
-                                    nx = -flipper_vec_y / flen  # Perpendicular (normal)
-                                    ny = flipper_vec_x / flen
-                                    if not f.is_left:
-                                        nx, ny = -nx, -ny  # Flip normal for right flipper
+                                
+                                nx = -flipper_vec_y / flen  # Perpendicular (normal)
+                                ny = flipper_vec_x / flen
+                                if not f.is_left:
+                                    nx, ny = -nx, -ny  # Flip normal for right flipper
                                         
-                                    # Position correction (push ball to edge)
-                                    ball_x = intersect_x + nx * ball_radius
-                                    ball_y = intersect_y + ny * ball_radius
-                                    print(f"Corrected by method 2 to {ball_x}, {ball_y}")
-                                    print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
-                                        
-                                    position_corrected = True
+                                # Position correction (push ball to edge)
+                                ball_x = intersect_x + nx * ball_radius
+                                ball_y = intersect_y + ny * ball_radius
+                                print(f"Corrected by method 2 to {ball_x}, {ball_y}")
+                                print(f"Before update: self.b.x = {self.b.x} and self.b.y = {self.b.y}")
+                                
+                                fcollision_occurred = True
+                                position_corrected = True
                                        
                                         
-                                    # Calculate reflection
-                                    dot = ball_dx * nx + ball_dy * ny
-                                    if dot < 0 or position_corrected:  # Only bounce if moving toward flipper
-                                        ball_dx = ball_dx - 2 * dot * nx
-                                        ball_dy = ball_dy - 2 * dot * ny
+                                # Calculate reflection
+                                dot = ball_dx * nx + ball_dy * ny
+                                if position_corrected and dot < 0:  # Only bounce if ball hit
+                                    ball_dx = ball_dx - 2 * dot * nx
+                                    ball_dy = ball_dy - 2 * dot * ny
                                             
-                                        # Apply force multipliers
-                                        if f.active:
-                                            ball_dx *= self.settings.flip_force
-                                            ball_dy *= self.settings.flip_force
-                                        else:
-                                            ball_dx *= self.settings.deadf_bounce
-                                            ball_dy *= self.settings.deadf_bounce
+                                    # Apply force multipliers
+                                    if f.active:
+                                        ball_dx *= self.settings.flip_force
+                                        ball_dy *= self.settings.flip_force
+                                    else:
+                                        ball_dx *= self.settings.deadf_bounce
+                                        ball_dy *= self.settings.deadf_bounce
                                         
-                                        print(f"BOUNCED by method 2")
-                                        break  # Handle only first collision
+                                    print(f"BOUNCED by method 2")
+                                    print(f"Ball dy: {self.b.dy} at y: {self.b.y}")
+                                        
 
 
                 # Update ball state if collision occurred
                 if fcollision_occurred:
                     self.b.x, self.b.y = ball_x, ball_y
                     self.b.dx, self.b.dy = ball_dx, ball_dy
+                    print(f"updated ball xy: {self.b.x, self.b.y}")
+                    
+                    
                 
 
 
@@ -427,6 +432,9 @@ class Pinball:
                         time.sleep(1.5)
                         self.b.reset()
                         score = 0  # Reset score when the game is over
+                
+                print(f"FINAL: {self.b.x, self.b.y}")
+                
         
 
     
