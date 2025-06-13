@@ -32,14 +32,7 @@ class Ball():
 
     def move(self):
 
-        # Cap the speed vector magnitude
-        speed = (self.dx ** 2 + self.dy ** 2) ** 0.5
-        if speed > self.settings.bsmax:
-            scale = self.settings.bsmax / speed
-            self.dx *= scale
-            self.dy *= scale
-
-        # Account for gravity and friction causing loss of inertia
+        # Account for gravity causing loss of inertia
         self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
         
 
@@ -52,8 +45,20 @@ class Ball():
         if self.y <= self.settings.screen_height:
             self.dy += 0.1
 
-        # Move the ball according to its speed, minus friction decay
-        max_speed = 30
+        # Cap the speed vector magnitude
+        speed = (self.dx ** 2 + self.dy ** 2) ** 0.5
+        if speed > self.settings.bsmax:
+            scale = self.settings.bsmax / speed
+            self.dx *= scale
+            self.dy *= scale
+
+
+
+        
+        max_dy = 40
+        if abs(self.dy) > max_dy:
+            print(f"⚠️ Abnormal dy detected: {self.dy}.")
+        
         self.x += self.dx 
         self.y += self.dy 
 
