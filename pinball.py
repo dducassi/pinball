@@ -176,6 +176,7 @@ class Pinball:
                 dx = ball_x - closest_x
                 dy = ball_y - closest_y
                 distance = math.sqrt(dx * dx + dy * dy)
+                distance = max(distance, 1e-4)
 
                 ball_relative_y = ball_y - (flipper_slope * ball_x + flipper_intercept)
 
@@ -189,7 +190,7 @@ class Pinball:
                     velocity_magnitude = math.hypot(ball_dx, ball_dy)
 
                     if distance_to_line < ball_radius + velocity_magnitude:
-                        if distance < ball_radius + velocity_magnitude and 0.05 < t < 0.95:
+                        if distance_to_line < ball_radius + velocity_magnitude and 0.05 < t < 0.95:
                             
 
                             # Normal vector calculation
@@ -217,8 +218,8 @@ class Pinball:
                                 ball_dy = ball_dy - 2 * dot_product * ny
 
                                 if f.active:
-                                    ball_dx *= self.settings.flip_force
-                                    ball_dy *= self.settings.flip_force
+                                    ball_dx += nx * (self.settings.flip_force - 1) * dot_product * -2
+                                    ball_dy += ny * (self.settings.flip_force - 1) * dot_product * -2
                                 else:
                                     ball_dx *= self.settings.deadf_bounce
                                     ball_dy *= self.settings.deadf_bounce
@@ -281,8 +282,8 @@ class Pinball:
                                         ball_dy = ball_dy - 2 * dot * ny
 
                                         if f.active:
-                                            ball_dx *= self.settings.flip_force
-                                            ball_dy *= self.settings.flip_force
+                                            ball_dx += nx * (self.settings.flip_force - 1) * dot * -2
+                                            ball_dy += ny * (self.settings.flip_force - 1) * dot* -2
                                         else:
                                             ball_dx *= self.settings.deadf_bounce
                                             ball_dy *= self.settings.deadf_bounce
@@ -326,6 +327,7 @@ class Pinball:
                             else:
                                 ball_dy, ball_dx = -ball_dx * bounce, ball_dy * bounce
                             position_corrected = True
+                            print(f"Block bounce, left slope. Pos:{ball_dy, ball_dx} ")
 
                 # Left vertical wall (x=0)
                 if ball_x <= ball_radius:
@@ -334,6 +336,7 @@ class Pinball:
                         if ball_dx < 0:
                             ball_dx = -ball_dx * bounce
                         position_corrected = True
+                        print(f"Block bounce, left wall. Pos:{ball_dy, ball_dx}")
 
             elif block is self.blocks[1]:
                 # Right lower block slope line (x2,y2) to (x3,y3)
@@ -355,6 +358,7 @@ class Pinball:
                                 else:
                                     ball_dy, ball_dx = -ball_dx * bounce, -ball_dy * bounce
                             position_corrected = True
+                            print(f"Block bounce, right slope. Pos:{ball_dy, ball_dx}")
 
                 # Right vertical wall (x=screen_width)
                 if ball_x >= self.settings.screen_width - ball_radius:
@@ -363,6 +367,7 @@ class Pinball:
                         if ball_dx > 0:
                             ball_dx = -ball_dx * bounce
                         position_corrected = True
+                        print(f"Block bounce, right wall. Pos:{ball_dy, ball_dx}")
 
         # --- Obstacle collisions ---
         for obs in self.obs:
@@ -404,8 +409,8 @@ class Pinball:
         revised_next_x = ball_x + ball_dx
         if abs(revised_next_y - ball_y) > 200 or abs(ball_dx - self.b.dx) > 100: # Sanity check
             print("⚠️ SUSPICIOUS movement detected!")
-            print(f"Before: y={ball_y}, dy={self.b.dy}")
-            print(f"After: y={next_y}, dy={ball_dy}")
+            print(f"Before: y={self.b.y}, dy={self.b.dy}")
+            print(f"After: y={ball_y}, dy={ball_dy}")
 
         # Update the ball's position and velocity once after all collisions
         self.b.x = ball_x
@@ -413,7 +418,7 @@ class Pinball:
         self.b.dx = ball_dx
         self.b.dy = ball_dy
 
-        print(f"FINAL updated ball position: ({self.b.x}, {self.b.y}), velocity: ({self.b.dx}, {self.b.dy})")
+        # print(f"FINAL updated ball position: ({self.b.x}, {self.b.y}), velocity: ({self.b.dx}, {self.b.dy})")
         
 
         # Reset ball if out of bounds or collision condition met
