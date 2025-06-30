@@ -145,35 +145,36 @@ class Pinball:
             length = f.length
             width = f.width  # Rectangle thickness
             
-            # Transform ball position to flipper's local coordinate system
-            dx = ball_x - pivot_x
-            dy = ball_y - pivot_y
-            local_x = dx * math.cos(angle) + dy * math.sin(angle)
-            local_y = -dx * math.sin(angle) + dy * math.cos(angle)
             
-            # Define rectangle boundaries in local space
-            rect_left = 0
-            rect_right = length
-            rect_top = -width/2
-            rect_bottom = width/2
-            
+            # Transform next ball position into flipper's local space
+            dx = next_x - pivot_x
+            dy = next_y - pivot_y
+            cos_a = math.cos(angle)
+            sin_a = math.sin(angle)
+            local_x = dx * cos_a + dy * sin_a
+            local_y = -dx * sin_a + dy * cos_a
+
+            # Define rectangle bounds (ensure left < right)
+            rect_left = min(0, length)
+            rect_right = max(0, length)
+            rect_top = -width / 2
+            rect_bottom = width / 2
+
             # Find closest point on rectangle to ball
             closest_x = max(rect_left, min(local_x, rect_right))
             closest_y = max(rect_top, min(local_y, rect_bottom))
-            
-            # Calculate distance between ball and closest point
+
+            # Distance from ball to closest point
             dist_x = local_x - closest_x
             dist_y = local_y - closest_y
-            distance = math.sqrt(dist_x**2 + dist_y**2)
-            
-            # Collision detected
+            distance = math.hypot(dist_x, dist_y)
+
             if distance < ball_radius:
-                # Calculate collision normal in local coordinates
+                # Calculate local-space normal
                 if distance > 1e-6:
-                    # Regular case: ball overlaps and we can compute normal
                     normal_local = (dist_x / distance, dist_y / distance)
                 else:
-                    # Fallback: use direction from rectangle center to ball
+                    # Fallback: push away from rectangle center
                     rect_cx = (rect_left + rect_right) / 2
                     rect_cy = (rect_top + rect_bottom) / 2
                     fallback_dx = local_x - rect_cx
@@ -181,30 +182,32 @@ class Pinball:
                     fallback_length = math.hypot(fallback_dx, fallback_dy) or 1.0
                     normal_local = (fallback_dx / fallback_length, fallback_dy / fallback_length)
 
-                # Convert normal to world coordinates
-                nx = normal_local[0] * math.cos(angle) - normal_local[1] * math.sin(angle)
-                ny = normal_local[0] * math.sin(angle) + normal_local[1] * math.cos(angle)
+                # Transform normal to world space
+                nx = normal_local[0] * cos_a - normal_local[1] * sin_a
+                ny = normal_local[0] * sin_a + normal_local[1] * cos_a
 
-                # Position correction: push ball out of flipper
+                # Position correction
                 overlap = ball_radius - distance
                 ball_x += nx * overlap
                 ball_y += ny * overlap
 
-                # Velocity reflection
+                # Reflect velocity
                 dot_product = ball_dx * nx + ball_dy * ny
-                if dot_product < 0:  # Only reflect if ball is moving into flipper
+                if dot_product < 0:
                     ball_dx -= 2 * dot_product * nx
                     ball_dy -= 2 * dot_product * ny
 
+                    # Add flip force
                     if f.active:
                         boost = self.settings.flip_force
                         ball_dx += nx * boost
                         ball_dy += ny * boost
                     else:
-                        ball_dx *= self.settings.deadf_bounce
-                        ball_dy *= self.settings.deadf_bounce
+                        bounce = self.settings.deadf_bounce
+                        ball_dx *= bounce
+                        ball_dy *= bounce
 
-                    # Enforce minimum velocity to keep ball from freezing
+                    # Ensure minimum velocity
                     min_vel = 0.5
                     if abs(ball_dx) < min_vel and abs(ball_dy) < min_vel:
                         sign_x = 1 if ball_dx >= 0 else -1
