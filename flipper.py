@@ -13,7 +13,7 @@ class Flipper:
         self.angular_vel = 0
         self.is_left = is_left
         self.active = False
-        self.width = 10
+        self.width = 5
         if self.is_left == False:
             self.length = -length
 
@@ -45,10 +45,3 @@ class Flipper:
 
 
 
-######
-
-#### FLIPPER FIX?
-# For non-normalized normal vectors
-#factor = 2 * dot_product / n_squared
-#self.b.dx = dx_old - factor * nx
-#self.b.dy = dy_old - factor * ny
