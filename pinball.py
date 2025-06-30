@@ -1,4 +1,3 @@
-
 ### WIZARD PINBALL ###
 
 import pygame
@@ -137,8 +136,9 @@ class Pinball:
         ball_dx = self.b.dx
         ball_dy = self.b.dy
         ball_radius = self.settings.br
+        position_corrected = False
 
-         # Process each flipper
+        # Process each flipper
         for f in self.flippers:
             pivot_x, pivot_y = f.pivot
             angle = f.angle
@@ -214,6 +214,7 @@ class Pinball:
                         sign_y = 1 if ball_dy >= 0 else -1
                         ball_dx = sign_x * min_vel
                         ball_dy = sign_y * min_vel
+                print(f"Hit flipper at {ball_x},{ball_y}, bounce velocity ({ball_dx},{ball_dy})")
 
 
 
@@ -238,7 +239,7 @@ class Pinball:
 
                 # Check collision with slope
                 if ball_x <= x3 + ball_radius:
-                    if ball_y >= self.settings.screen_height - (155 + ball_radius):
+                    if y2 - ball_radius <= ball_y <= y3 + ball_radius:
                         if ball_y + ball_diag >= line_y_at_ball:
                             ball_y = line_y_at_ball - ball_diag
                             if ball_dx <= 0:
@@ -246,16 +247,16 @@ class Pinball:
                             else:
                                 ball_dy, ball_dx = -ball_dx * bounce, ball_dy * bounce
                             position_corrected = True
-                            print(f"Block bounce, left slope. Pos:{ball_dy, ball_dx} ")
+                            print(f"Block bounce, left slope. Velocity:{ball_dy, ball_dx} ")
 
-                # Left vertical wall (x=0)
-                if ball_x <= ball_radius:
-                    if ball_y >= y2:  # y2 is upper y of vertical wall
-                        ball_x = ball_radius
+                # Left vertical wall (marked by x4)
+                if ball_x <= x4 + ball_radius:
+                    if ball_y >= y3:  # y3 is upper y of vertical wall
                         if ball_dx < 0:
+                            ball_x = x4 + ball_radius
                             ball_dx = -ball_dx * bounce
-                        position_corrected = True
-                        print(f"Block bounce, left wall. Pos:{ball_dy, ball_dx}")
+                            position_corrected = True
+                        print(f"Block bounce, left wall. Velocity:{ball_dy, ball_dx}")
 
             elif block is self.blocks[1]:
                 # Right lower block slope line (x2,y2) to (x3,y3)
@@ -266,7 +267,7 @@ class Pinball:
 
                 # Check collision with slope
                 if ball_x >= x3 - ball_radius:
-                    if ball_y >= self.settings.screen_height - (155 + ball_radius):
+                    if y2 - ball_radius <= ball_y <= y3 + ball_radius:
                         if ball_y + ball_diag >= line_y_at_ball:
                             ball_y = line_y_at_ball - ball_diag
                             if ball_dx >= 0:
@@ -279,12 +280,14 @@ class Pinball:
                             position_corrected = True
                             print(f"Block bounce, right slope. Pos:{ball_dy, ball_dx}")
 
-                # Right vertical wall (x=screen_width)
-                if ball_x >= self.settings.screen_width - ball_radius:
-                    if ball_y >= y2:
+                # Right vertical wall (marked by x4)
+                if ball_x >= x4 - ball_radius:
+                    if ball_y >= y3:
                         ball_x = self.settings.screen_width - ball_radius
                         if ball_dx > 0:
+                            ball_x = x4 - ball_radius
                             ball_dx = -ball_dx * bounce
+                            position_corrected = True
                         position_corrected = True
                         print(f"Block bounce, right wall. Pos:{ball_dy, ball_dx}")
 
@@ -325,8 +328,7 @@ class Pinball:
                 print(f"Hit obstacle at {ox},{oy}, bounce velocity ({ball_dx},{ball_dy})")
 
         revised_next_y = ball_y + ball_dy
-        revised_next_x = ball_x + ball_dx
-        if abs(revised_next_y - ball_y) > 200 or abs(ball_dx - self.b.dx) > 100: # Sanity check
+        if abs(revised_next_y - ball_y) > 50: # Sanity check
             print("⚠️ SUSPICIOUS movement detected!")
             print(f"Before: y={self.b.y}, dy={self.b.dy}")
             print(f"After: y={ball_y}, dy={ball_dy}")
@@ -419,6 +421,7 @@ class Pinball:
 
                 for i in range(self.settings.phys_runs):
                     self.ball_physics()
+                print(f"Ball pos: {self.b.x},{self.b.y}")
 
                 
                 
