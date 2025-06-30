@@ -278,7 +278,7 @@ class Pinball:
                                 else:
                                     ball_dy, ball_dx = -ball_dx * bounce, -ball_dy * bounce
                             position_corrected = True
-                            print(f"Block bounce, right slope. Pos:{ball_dy, ball_dx}")
+                            print(f"Block bounce, right slope. Velocity:{ball_dy, ball_dx}")
 
                 # Right vertical wall (marked by x4)
                 if ball_x >= x4 - ball_radius:
@@ -289,7 +289,7 @@ class Pinball:
                             ball_dx = -ball_dx * bounce
                             position_corrected = True
                         position_corrected = True
-                        print(f"Block bounce, right wall. Pos:{ball_dy, ball_dx}")
+                        print(f"Block bounce, right wall. Velocity:{ball_dy, ball_dx}")
 
         # --- Obstacle collisions ---
         for obs in self.obs:
