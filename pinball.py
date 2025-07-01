@@ -117,6 +117,54 @@ class Pinball:
 
     def increment_score(self):
         self.score += self.settings.pph # Score goes up
+
+    def swept_circle_vs_aabb(self, p0, p1, radius, rect_left, rect_right, rect_top, rect_bottom):
+        """
+        Checks if a circle of given radius moving from p0 to p1 collides with AABB defined by rect_*.
+        Returns (hit, contact_point)
+        """
+
+        # Expand rectangle by radius
+        r_left = rect_left - radius
+        r_right = rect_right + radius
+        r_top = rect_top - radius
+        r_bottom = rect_bottom + radius
+
+        # Get delta
+        dx = p1[0] - p0[0]
+        dy = p1[1] - p0[1]
+
+        t_entry = 0.0
+        t_exit = 1.0
+
+        for axis in range(2):
+            if axis == 0:
+                p = p0[0]
+                d = dx
+                min_b = r_left
+                max_b = r_right
+            else:
+                p = p0[1]
+                d = dy
+                min_b = r_top
+                max_b = r_bottom
+
+            if abs(d) < 1e-8:
+                if p < min_b or p > max_b:
+                    return False, None
+            else:
+                t1 = (min_b - p) / d
+                t2 = (max_b - p) / d
+                t_min = min(t1, t2)
+                t_max = max(t1, t2)
+                t_entry = max(t_entry, t_min)
+                t_exit = min(t_exit, t_max)
+                if t_entry > t_exit:
+                    return False, None
+
+        contact_x = p0[0] + dx * t_entry
+        contact_y = p0[1] + dy * t_entry
+        return True, (contact_x, contact_y)
         
 
     def ball_physics(self):
@@ -151,8 +199,16 @@ class Pinball:
             dy = next_y - pivot_y
             cos_a = math.cos(angle)
             sin_a = math.sin(angle)
-            local_x = dx * cos_a + dy * sin_a
-            local_y = -dx * sin_a + dy * cos_a
+            # Transform both current and next ball positions into flipper's local space
+            dx = ball_x - pivot_x
+            dy = ball_y - pivot_y
+            local_x1 = dx * cos_a + dy * sin_a
+            local_y1 = -dx * sin_a + dy * cos_a
+
+            dx_next = next_x - pivot_x
+            dy_next = next_y - pivot_y
+            local_x2 = dx_next * cos_a + dy_next * sin_a
+            local_y2 = -dx_next * sin_a + dy_next * cos_a
 
             # Define rectangle bounds (ensure left < right)
             rect_left = min(0, length)
@@ -161,43 +217,50 @@ class Pinball:
             rect_bottom = width / 2
 
             # Find closest point on rectangle to ball
-            closest_x = max(rect_left, min(local_x, rect_right))
-            closest_y = max(rect_top, min(local_y, rect_bottom))
+            closest_x = max(rect_left, min(local_x2, rect_right))
+            closest_y = max(rect_top, min(local_y2, rect_bottom))
 
             # Distance from ball to closest point
-            dist_x = local_x - closest_x
-            dist_y = local_y - closest_y
+            dist_x = local_x2 - closest_x
+            dist_y = local_y2 - closest_y
             distance = math.hypot(dist_x, dist_y)
 
-            if distance < ball_radius:
-                # Calculate local-space normal
-                if distance > 1e-6:
-                    normal_local = (dist_x / distance, dist_y / distance)
-                else:
-                    # Fallback: push away from rectangle center
-                    rect_cx = (rect_left + rect_right) / 2
-                    rect_cy = (rect_top + rect_bottom) / 2
-                    fallback_dx = local_x - rect_cx
-                    fallback_dy = local_y - rect_cy
-                    fallback_length = math.hypot(fallback_dx, fallback_dy) or 1.0
-                    normal_local = (fallback_dx / fallback_length, fallback_dy / fallback_length)
+            # Check swept collision with flipper rectangle
+            hit, contact = self.swept_circle_vs_aabb(
+                (local_x1, local_y1),
+                (local_x2, local_y2),
+                ball_radius,
+                rect_left, rect_right,
+                rect_top, rect_bottom)
+            if hit:
+                # Move ball to contact point (in local space)
+                local_contact_x, local_contact_y = contact
+
+                # Transform contact point back to world space
+                world_dx = local_contact_x * cos_a - local_contact_y * sin_a
+                world_dy = local_contact_x * sin_a + local_contact_y * cos_a
+                ball_x = pivot_x + world_dx
+                ball_y = pivot_y + world_dy
+
+                # Compute local normal
+                cx = max(rect_left, min(local_contact_x, rect_right))
+                cy = max(rect_top, min(local_contact_y, rect_bottom))
+                nx_local = local_contact_x - cx
+                ny_local = local_contact_y - cy
+                length = math.hypot(nx_local, ny_local) or 1.0
+                nx_local /= length
+                ny_local /= length
 
                 # Transform normal to world space
-                nx = normal_local[0] * cos_a - normal_local[1] * sin_a
-                ny = normal_local[0] * sin_a + normal_local[1] * cos_a
-
-                # Position correction
-                overlap = ball_radius - distance
-                ball_x += nx * overlap
-                ball_y += ny * overlap
+                nx = nx_local * cos_a - ny_local * sin_a
+                ny = nx_local * sin_a + ny_local * cos_a
 
                 # Reflect velocity
-                dot_product = ball_dx * nx + ball_dy * ny
-                if dot_product < 0:
-                    ball_dx -= 2 * dot_product * nx
-                    ball_dy -= 2 * dot_product * ny
+                dot = ball_dx * nx + ball_dy * ny
+                if dot < 0:
+                    ball_dx -= 2 * dot * nx
+                    ball_dy -= 2 * dot * ny
 
-                    # Add flip force
                     if f.active:
                         boost = self.settings.flip_force
                         ball_dx += nx * boost
@@ -207,14 +270,57 @@ class Pinball:
                         ball_dx *= bounce
                         ball_dy *= bounce
 
-                    # Ensure minimum velocity
-                    min_vel = 0.5
-                    if abs(ball_dx) < min_vel and abs(ball_dy) < min_vel:
-                        sign_x = 1 if ball_dx >= 0 else -1
-                        sign_y = 1 if ball_dy >= 0 else -1
-                        ball_dx = sign_x * min_vel
-                        ball_dy = sign_y * min_vel
-                print(f"Hit flipper at {ball_x},{ball_y}, bounce velocity ({ball_dx},{ball_dy})")
+                    position_corrected = True
+                    print(f"[Swept CCD] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
+                break
+
+            if distance < ball_radius:
+                    # Calculate local-space normal
+                    if distance > 1e-6:
+                        normal_local = (dist_x / distance, dist_y / distance)
+                    else:
+                        # Fallback: push away from rectangle center
+                        rect_cx = (rect_left + rect_right) / 2
+                        rect_cy = (rect_top + rect_bottom) / 2
+                        fallback_dx = local_x2 - rect_cx
+                        fallback_dy = local_y2 - rect_cy
+                        fallback_length = math.hypot(fallback_dx, fallback_dy) or 1.0
+                        normal_local = (fallback_dx / fallback_length, fallback_dy / fallback_length)
+
+                    # Transform normal to world space
+                    nx = normal_local[0] * cos_a - normal_local[1] * sin_a
+                    ny = normal_local[0] * sin_a + normal_local[1] * cos_a
+
+                    # Position correction
+                    overlap = ball_radius - distance
+                    ball_x += nx * overlap
+                    ball_y += ny * overlap
+
+                    # Reflect velocity
+                    dot_product = ball_dx * nx + ball_dy * ny
+                    if dot_product < 0:
+                        ball_dx -= 2 * dot_product * nx
+                        ball_dy -= 2 * dot_product * ny
+
+                        # Add flip force
+                        if f.active:
+                            boost = self.settings.flip_force
+                            ball_dx += nx * boost
+                            ball_dy += ny * boost
+                        else:
+                            bounce = self.settings.deadf_bounce
+                            ball_dx *= bounce
+                            ball_dy *= bounce
+
+                        # Ensure minimum velocity
+                        min_vel = 0.5
+                        if abs(ball_dx) < min_vel and abs(ball_dy) < min_vel:
+                            sign_x = 1 if ball_dx >= 0 else -1
+                            sign_y = 1 if ball_dy >= 0 else -1
+                            ball_dx = sign_x * min_vel
+                            ball_dy = sign_y * min_vel
+                    position_corrected = True
+                    print(f"Hit flipper at {ball_x},{ball_y}, bounce velocity ({ball_dx},{ball_dy})")
 
 
 
