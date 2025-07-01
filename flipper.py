@@ -13,7 +13,7 @@ class Flipper:
         self.angular_vel = 0
         self.is_left = is_left
         self.active = False
-        self.width = 5
+        self.width = 3
         if self.is_left == False:
             self.length = -length
 
