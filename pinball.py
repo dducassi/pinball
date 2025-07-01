@@ -118,74 +118,6 @@ class Pinball:
     def increment_score(self):
         self.score += self.settings.pph # Score goes up
 
-    def resolve_overlap(self, ball_pos, ball_vel, ball_radius, rect_bounds, flipper_transform, flipper_active):
-        """
-        Resolves a circle-vs-AABB overlap in 2D with position correction and velocity reflection.
-        
-        Parameters:
-            ball_pos: (x, y) in local flipper space
-            ball_vel: (dx, dy) in world space
-            ball_radius: float
-            rect_bounds: (left, right, top, bottom) in local space
-            flipper_transform: (pivot_x, pivot_y, angle)
-            flipper_active: whether the flipper is active (adds boost)
-
-        Returns:
-            (corrected_world_pos, new_world_velocity)
-        """
-
-        local_x, local_y = ball_pos
-        dx, dy = ball_vel
-        rect_left, rect_right, rect_top, rect_bottom = rect_bounds
-        pivot_x, pivot_y, angle = flipper_transform
-
-        # Find closest point on AABB
-        closest_x = max(rect_left, min(local_x, rect_right))
-        closest_y = max(rect_top, min(local_y, rect_bottom))
-
-        # Vector from closest point to ball
-        dist_x = local_x - closest_x
-        dist_y = local_y - closest_y
-        distance = math.hypot(dist_x, dist_y)
-
-        if distance < 1e-6:
-            # Fallback normal (center-based)
-            rect_cx = (rect_left + rect_right) / 2
-            rect_cy = (rect_top + rect_bottom) / 2
-            fallback_dx = local_x - rect_cx
-            fallback_dy = local_y - rect_cy
-            fallback_length = math.hypot(fallback_dx, fallback_dy) or 1.0
-            nx_local = fallback_dx / fallback_length
-            ny_local = fallback_dy / fallback_length
-        else:
-            nx_local = dist_x / distance
-            ny_local = dist_y / distance
-
-        # Convert normal to world space
-        cos_a = math.cos(angle)
-        sin_a = math.sin(angle)
-        nx = nx_local * cos_a - ny_local * sin_a
-        ny = nx_local * sin_a + ny_local * cos_a
-
-        # Push ball out of overlap
-        overlap = ball_radius - distance
-        world_x = pivot_x + local_x * cos_a - local_y * sin_a + nx * overlap
-        world_y = pivot_y + local_x * sin_a + local_y * cos_a + ny * overlap
-
-        # Reflect velocity
-        dot = dx * nx + dy * ny
-        if dot < 0:
-            dx -= 2 * dot * nx
-            dy -= 2 * dot * ny
-
-            if flipper_active:
-                dx += nx * self.settings.flip_force
-                dy += ny * self.settings.flip_force
-            else:
-                dx *= self.settings.deadf_bounce
-                dy *= self.settings.deadf_bounce
-
-        return (world_x, world_y), (dx, dy)
 
     def swept_circle_vs_aabb(self, p0, p1, radius, rect_left, rect_right, rect_top, rect_bottom):
         """
@@ -343,23 +275,56 @@ class Pinball:
                     print(f"[Swept CCD] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
                 break
 
-            if not position_corrected and distance < ball_radius:
-                rect_bounds = (rect_left, rect_right, rect_top, rect_bottom)
-                flipper_transform = (pivot_x, pivot_y, angle)
+            # Fallback: static overlap resolution (e.g., flipper moved into ball)
+            if distance < ball_radius:
+                # Compute contact normal (local space)
+                if distance > 1e-6:
+                    normal_local = (dist_x / distance, dist_y / distance)
+                else:
+                    # Push away from flipper rectangle center
+                    rect_cx = (rect_left + rect_right) / 2
+                    rect_cy = (rect_top + rect_bottom) / 2
+                    fallback_dx = local_x2 - rect_cx
+                    fallback_dy = local_y2 - rect_cy
+                    fallback_length = math.hypot(fallback_dx, fallback_dy) or 1.0
+                    normal_local = (fallback_dx / fallback_length, fallback_dy / fallback_length)
 
-                corrected_pos, corrected_vel = self.resolve_overlap(
-                    (local_x2, local_y2),
-                    (ball_dx, ball_dy),
-                    ball_radius,
-                    rect_bounds,
-                    flipper_transform,
-                    f.active)
+                # Transform normal to world space
+                nx = normal_local[0] * cos_a - normal_local[1] * sin_a
+                ny = normal_local[0] * sin_a + normal_local[1] * cos_a
 
-                ball_x, ball_y = corrected_pos
-                ball_dx, ball_dy = corrected_vel
+                # Push ball out of flipper
+                overlap = ball_radius - distance
+                ball_x += nx * overlap
+                ball_y += ny * overlap
+
+                # Reflect velocity
+                dot_product = ball_dx * nx + ball_dy * ny
+                if dot_product < 0:
+                    ball_dx -= 2 * dot_product * nx
+                    ball_dy -= 2 * dot_product * ny
+
+                    # Add flipper force if active
+                    if f.active:
+                        boost = self.settings.flip_force
+                        ball_dx += nx * boost
+                        ball_dy += ny * boost
+                    else:
+                        bounce = self.settings.deadf_bounce
+                        ball_dx *= bounce
+                        ball_dy *= bounce
+
+                    # Enforce minimum velocity
+                    min_vel = 0.5
+                    if abs(ball_dx) < min_vel and abs(ball_dy) < min_vel:
+                        sign_x = 1 if ball_dx >= 0 else -1
+                        sign_y = 1 if ball_dy >= 0 else -1
+                        ball_dx = sign_x * min_vel
+                        ball_dy = sign_y * min_vel
+
                 position_corrected = True
-                print(f"[Overlap Correction] Flipper overlap at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
-                break
+                print(f"[Fallback] Flipper overlap at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
+                time.sleep(2)
 
 
 
