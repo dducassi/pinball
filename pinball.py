@@ -527,16 +527,9 @@ class Pinball:
 
                 for i in range(self.settings.phys_runs):
                     self.ball_physics()
-                print(f"Ball pos: {self.b.x},{self.b.y}")
-
                 
                 
                 
-
-                
-                
-                
-
             # Draw game elements
 
             
