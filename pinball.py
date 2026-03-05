@@ -5,6 +5,7 @@ import sys
 import random
 import time
 import math
+import argparse
 from settings import Settings
 from ball import Ball
 from obstacles import Obstacle
@@ -13,6 +14,16 @@ from flipper import Flipper
 
 
 import os
+
+try:
+    print("Script starting...", flush=True)
+    # rest of code
+except Exception as e:
+    print(f"ERROR: {e}")
+    import traceback
+    traceback.print_exc()
+
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if getattr(sys, 'frozen', False):
     # Running as EXE - use temporary bundle directory
@@ -27,17 +38,27 @@ class Pinball:
     
     
 
-    def __init__(self):
+    def __init__(self, test_mode=False):
         # Initialize Pygame and settings
+        self.test_mode = test_mode
+        if test_mode:
+            os.environ['SDL_VIDEODRIVER'] = 'dummy'
+            os.environ['SDL_AUDIODRIVER'] = 'dummy'
         pygame.init()
 
         self.settings = Settings()
 
         # Set up the game window
-        self.screen = pygame.display.set_mode((self.settings.screen_width, 
-            self.settings.screen_height))
-        self.bg = pygame.image.load(os.path.join(
-                                        base_dir, 'wizard.png'))
+        self.bg = None
+        
+        if test_mode:
+            self.screen = pygame.display.set_mode((self.settings.screen_width, 
+                self.settings.screen_height))
+        else:
+            self.screen = pygame.display.set_mode((self.settings.screen_width, 
+                self.settings.screen_height), pygame.RESIZABLE)
+            self.bg = pygame.image.load(os.path.join(
+                                            base_dir, 'wizard.png'))
         pygame.display.set_caption('Wizard Pinball')
         
         # Initialize the ball and flippers
@@ -66,7 +87,6 @@ class Pinball:
         y = 0
         c = self.settings.blu
         self.obs.append(Obstacle(x, y, c))
-        self.draw_obs()
         x = .22 * self.settings.orad
         y = 6/7 * (self.settings.screen_height)
         c = self.settings.blu
@@ -256,6 +276,17 @@ class Pinball:
                 nx = nx_local * cos_a - ny_local * sin_a
                 ny = nx_local * sin_a + ny_local * cos_a
 
+                # Push ball out of flipper (ensure it's outside)
+                push_dist = 1.0
+                ball_x += nx * push_dist
+                ball_y += ny * push_dist
+
+                # Compute flipper tip velocity (perpendicular to flipper direction)
+                # Angular velocity at tip = angular_vel * length
+                tip_speed = f.angular_vel * length
+                tip_vx = -math.sin(angle) * tip_speed
+                tip_vy = math.cos(angle) * tip_speed
+
                 # Reflect velocity
                 dot = ball_dx * nx + ball_dy * ny
                 if dot < 0:
@@ -263,13 +294,21 @@ class Pinball:
                     ball_dy -= 2 * dot * ny
 
                     if f.active:
-                        boost = self.settings.flip_force
-                        ball_dx += nx * boost
-                        ball_dy += ny * boost
+                        # Velocity-based transfer only
+                        ball_dx += tip_vx * 0.8
+                        ball_dy += tip_vy * 0.8
                     else:
                         bounce = self.settings.deadf_bounce
                         ball_dx *= bounce
                         ball_dy *= bounce
+
+                    # Enforce minimum velocity
+                    min_vel = 2.0
+                    speed = math.hypot(ball_dx, ball_dy)
+                    if speed < min_vel:
+                        scale = min_vel / speed
+                        ball_dx *= scale
+                        ball_dy *= scale
 
                     position_corrected = True
                     print(f"[Swept CCD] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
@@ -293,8 +332,13 @@ class Pinball:
                 nx = normal_local[0] * cos_a - normal_local[1] * sin_a
                 ny = normal_local[0] * sin_a + normal_local[1] * cos_a
 
+                # Compute flipper tip velocity
+                tip_speed = f.angular_vel * length
+                tip_vx = -math.sin(angle) * tip_speed
+                tip_vy = math.cos(angle) * tip_speed
+
                 # Push ball out of flipper
-                overlap = ball_radius - distance
+                overlap = ball_radius - distance + 1.0
                 ball_x += nx * overlap
                 ball_y += ny * overlap
 
@@ -304,27 +348,25 @@ class Pinball:
                     ball_dx -= 2 * dot_product * nx
                     ball_dy -= 2 * dot_product * ny
 
-                    # Add flipper force if active
-                    if f.active:
-                        boost = self.settings.flip_force
-                        ball_dx += nx * boost
-                        ball_dy += ny * boost
-                    else:
-                        bounce = self.settings.deadf_bounce
-                        ball_dx *= bounce
-                        ball_dy *= bounce
+                # Add flipper force if active (always, not just on collision)
+                if f.active:
+                    ball_dx += tip_vx * 0.8
+                    ball_dy += tip_vy * 0.8
+                else:
+                    bounce = self.settings.deadf_bounce
+                    ball_dx *= bounce
+                    ball_dy *= bounce
 
-                    # Enforce minimum velocity
-                    min_vel = 0.5
-                    if abs(ball_dx) < min_vel and abs(ball_dy) < min_vel:
-                        sign_x = 1 if ball_dx >= 0 else -1
-                        sign_y = 1 if ball_dy >= 0 else -1
-                        ball_dx = sign_x * min_vel
-                        ball_dy = sign_y * min_vel
+                # Enforce minimum velocity (always, not just on dot_product < 0)
+                min_vel = 2.0
+                speed = math.hypot(ball_dx, ball_dy)
+                if speed < min_vel:
+                    scale = min_vel / speed
+                    ball_dx *= scale
+                    ball_dy *= scale
 
                 position_corrected = True
                 print(f"[Fallback] Flipper overlap at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
-                time.sleep(2)
 
 
 
@@ -478,8 +520,17 @@ class Pinball:
 
         # Main game loop
         while True:
-            self.screen.blit(self.bg, (0, 0))  # Paint background
-
+            if self.bg:
+                self.screen.blit(self.bg, (0, 0))  # Paint background
+            else:
+                print("WARNING: No background image!", flush=True)
+                self.screen.fill((0, 0, 0))  # Black background if no image
+            
+            # Draw start text first so it appears immediately
+            if not running and show_start_text:
+                f = pygame.font.Font(None, 36)
+                start_text = f.render("Press S to start", True, self.settings.wht)
+                self.screen.blit(start_text, ((self.settings.screen_width - start_text.get_width()) // 2, (self.settings.screen_height - start_text.get_height()) // 2))
             
             # Handle events
             for event in pygame.event.get():
@@ -523,45 +574,83 @@ class Pinball:
                 f = pygame.font.Font(None, 36)
                 pause_text = f.render("Paused", True, self.settings.wht)
                 self.screen.blit(pause_text, ((self.settings.screen_width - pause_text.get_width()) // 2, (self.settings.screen_height - pause_text.get_height()) // 2))
-                
-               
 
             # If game is running, not paused
             if running and not paused:
-
                 for i in range(self.settings.phys_runs):
                     self.ball_physics()
-                
-                
-                
-            # Draw game elements
 
-            
+            # Draw game elements
             self.fl.draw(self.screen)
             self.fr.draw(self.screen)
-        
             self.b.draw_ball()
-
             self.draw_obs()
-            self.draw_blocks()
-           
-            
-
+            if not self.test_mode:
+                self.draw_blocks()
 
             # Display the current score
             f = pygame.font.Font(None, 36)
             score_text = f.render(f'Score: {self.score}', True, self.settings.wht)
             self.screen.blit(score_text, (20, 20))
 
-
             # Update the display
             pygame.display.flip()
-
 
             # Control the frame rate
             pygame.time.Clock().tick(30)
 
+    def run_test(self, num_frames=500):
+        print(f"=== HEADLESS TEST MODE ({num_frames} frames) ===")
+        self.score = 0
+        running = True
+        frame = 0
+        
+        print(f"Initial ball: ({self.b.x}, {self.b.y}) velocity: ({self.b.dx}, {self.b.dy})")
+        
+        while running and frame < num_frames:
+            try:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+            except:
+                pass
+            
+            self.ball_physics()
+            
+            if frame % 50 == 0:
+                print(f"Frame {frame}: ball at ({self.b.x:.1f}, {self.b.y:.1f}), velocity ({self.b.dx:.2f}, {self.b.dy:.2f}), score={self.score}")
+            
+            if self.b.check_collision():
+                print(f"Frame {frame}: BALL RESET - final position ({self.b.x}, {self.b.y})")
+                self.b.reset()
+                self.score = 0
+            
+            self.b.move()
+            frame += 1
+        
+        print(f"=== TEST COMPLETE - Final score: {self.score} ===")
+        pygame.quit()
+        input("Press Enter to exit...")
+
 if __name__ == '__main__':
-    # Make a game instance and run the game.
-    pb = Pinball()
-    pb.run_game()
+    import sys
+    try:
+        print("Starting pinball...", flush=True)
+        parser = argparse.ArgumentParser(description='Wizard Pinball')
+        parser.add_argument('--test', action='store_true', help='Run in headless test mode')
+        parser.add_argument('--frames', type=int, default=500, help='Number of frames to run in test mode')
+        args = parser.parse_args()
+        
+        print(f"Creating Pinball instance, test_mode={args.test}", flush=True)
+        pb = Pinball(test_mode=args.test)
+        print("Pinball instance created", flush=True)
+        
+        if args.test:
+            pb.run_test(num_frames=args.frames)
+        else:
+            pb.run_game()
+    except Exception as e:
+        print(f"ERROR: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        input("Press Enter to exit...")
