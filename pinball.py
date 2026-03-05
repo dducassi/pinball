@@ -303,7 +303,7 @@ class Pinball:
                         ball_dy *= bounce
 
                     # Enforce minimum velocity
-                    min_vel = 2.0
+                    min_vel = 0
                     speed = math.hypot(ball_dx, ball_dy)
                     if speed < min_vel:
                         scale = min_vel / speed
@@ -481,7 +481,7 @@ class Pinball:
 
         revised_next_y = ball_y + ball_dy
         if abs(revised_next_y - ball_y) > 50: # Sanity check
-            print("⚠️ SUSPICIOUS movement detected!")
+            print("!!! SUSPICIOUS movement detected!")
             print(f"Before: y={self.b.y}, dy={self.b.dy}")
             print(f"After: y={ball_y}, dy={ball_dy}")
 
@@ -491,7 +491,7 @@ class Pinball:
         self.b.dx = ball_dx
         self.b.dy = ball_dy
 
-        print(f"FINAL ball pos: ({self.b.x}, {self.b.y}), velocity: ({self.b.dx}, {self.b.dy})")
+        # print(f"FINAL ball pos: ({self.b.x}, {self.b.y}), velocity: ({self.b.dx}, {self.b.dy})")
         
 
         # Reset ball if out of bounds or collision condition met
