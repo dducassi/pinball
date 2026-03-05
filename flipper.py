@@ -19,7 +19,7 @@ class Flipper:
 
     def update(self):
         # Smooth rotation using angular velocity
-        self.angular_vel += (self.target_angle - self.angle) * 0.2
+        self.angular_vel += (self.target_angle - self.angle) * 0.25
         self.angular_vel *= 0.73  # Damping
         self.angle += self.angular_vel
         
