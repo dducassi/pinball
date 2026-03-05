@@ -33,17 +33,12 @@ class Ball():
     def move(self):
 
         # Account for gravity causing loss of inertia
-        self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
-        
-
-        # If ball is falling, accelerate y speed
-        if self.dy > 0:
-            self.dy -= (0.02 * (self.dy * -1)) 
+        # self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
             
         
         # Always fall
         if self.y <= self.settings.screen_height:
-            self.dy += 0.1
+            self.dy += 0.09 / self.settings.phys_runs
 
         # Cap the speed vector magnitude
         speed = (self.dx ** 2 + self.dy ** 2) ** 0.5
@@ -57,7 +52,7 @@ class Ball():
         
         max_dy = 40
         if abs(self.dy) > max_dy:
-            print(f"⚠️ Abnormal dy detected: {self.dy}.")
+            print(f"!!! Abnormal dy detected: {self.dy}.")
         
         self.x += self.dx 
         self.y += self.dy 
