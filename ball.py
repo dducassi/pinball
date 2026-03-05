@@ -33,7 +33,7 @@ class Ball():
     def move(self):
 
         # Account for gravity causing loss of inertia
-        # self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
+        self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
             
         
         # Always fall
