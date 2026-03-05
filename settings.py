@@ -13,7 +13,7 @@ class Settings:
 
         # Ball properties
         self.br = 10  # ball radius
-        self.phys_runs = 2
+        self.phys_runs = 10
 
         # Block properties
         self.block_bounce = 0.8
@@ -22,7 +22,7 @@ class Settings:
         # Flipper properties
         self.f_length = 4/21 * self.screen_width
         self.flip_force = 1.25
-        self.deadf_bounce = 0.75
+        self.deadf_bounce = 0.9
         self.collision_samples = 4  # Number of path samples
         self.collision_tolerance = 2  # Collision margin
 
@@ -49,8 +49,8 @@ class Settings:
         self.init_dynamic_settings()
     
     def init_dynamic_settings(self):
-        self.bs = 5   # ball speed
-        self.bsmax = 20 # max ball speed
+        self.bs = 1   # ball speed
+        self.bsmax = 100 / self.phys_runs # max ball speed
 
 
 
