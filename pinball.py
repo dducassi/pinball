@@ -268,6 +268,22 @@ class Pinball:
                 cy = max(rect_top, min(local_contact_y, rect_bottom))
                 nx_local = local_contact_x - cx
                 ny_local = local_contact_y - cy
+
+                # If normal is near zero (contact exactly on edge), determine which edge
+                if abs(nx_local) < 1e-6 and abs(ny_local) < 1e-6:
+                    eps = 1e-4
+                    if abs(local_contact_y - rect_top) < eps:
+                        nx_local, ny_local = 0, -1   # top edge (outward normal)
+                    elif abs(local_contact_y - rect_bottom) < eps:
+                        nx_local, ny_local = 0, 1    # bottom edge
+                    elif abs(local_contact_x - rect_left) < eps:
+                        nx_local, ny_local = -1, 0   # left edge
+                    elif abs(local_contact_x - rect_right) < eps:
+                        nx_local, ny_local = 1, 0    # right edge
+                    else:
+                        # Default to top edge
+                        nx_local, ny_local = 0, -1
+
                 length = math.hypot(nx_local, ny_local) or 1.0
                 nx_local /= length
                 ny_local /= length
@@ -277,7 +293,7 @@ class Pinball:
                 ny = nx_local * sin_a + ny_local * cos_a
 
                 # Push ball out of flipper (ensure it's outside)
-                push_dist = 1.0
+                push_dist = 2.0
                 ball_x += nx * push_dist
                 ball_y += ny * push_dist
 
@@ -295,8 +311,9 @@ class Pinball:
 
                     if f.active:
                         # Velocity-based transfer only
-                        ball_dx += tip_vx * 0.8
-                        ball_dy += tip_vy * 0.8
+                        sign = 1 if f.is_left else -1   # assume is_left=True for left, False for right
+                        ball_dx += sign * tip_vx * (self.settings.phys_runs/2)
+                        ball_dy += sign * tip_vy * (self.settings.phys_runs/2)
                     else:
                         bounce = self.settings.deadf_bounce
                         ball_dx *= bounce
@@ -350,12 +367,12 @@ class Pinball:
 
                 # Add flipper force if active (always, not just on collision)
                 if f.active:
-                    ball_dx += tip_vx * 0.8
-                    ball_dy += tip_vy * 0.8
+                    ball_dx += tip_vx * (self.settings.phys_runs/2)
+                    ball_dy += tip_vy * (self.settings.phys_runs/2)
                 else:
                     bounce = self.settings.deadf_bounce
-                    ball_dx *= bounce
-                    ball_dy *= bounce
+                    ball_dx *= bounce 
+                    ball_dy *= bounce 
 
                 # Enforce minimum velocity (always, not just on dot_product < 0)
                 min_vel = 2.0
