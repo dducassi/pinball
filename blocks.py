@@ -35,11 +35,12 @@ class Block:
 
     def collide(self, ball_x, ball_y, ball_dx, ball_dy, ball_radius):
         """
-        Check collision between this block and the ball.
-        Returns (new_ball_x, new_ball_y, new_ball_dx, new_ball_dy, hit)
+        Check collision with block and resolve. 
+        Returns (new_ball_x, new_ball_y, new_ball_dx, new_ball_dy, hit).
         """
         best_penetration = 0
         best_nx = best_ny = 0
+        best_cx = best_cy = None
         hit = False
 
         # Check edges
@@ -52,11 +53,11 @@ class Block:
                 penetration = ball_radius - dist
                 if penetration > best_penetration:
                     best_penetration = penetration
+                    best_cx, best_cy = cx, cy
                     if dist > 0:
                         best_nx = dx / dist
                         best_ny = dy / dist
                     else:
-                        # Ball exactly on edge – compute a normal perpendicular to the edge
                         edge_dx = x2 - x1
                         edge_dy = y2 - y1
                         best_nx = edge_dy
@@ -78,6 +79,7 @@ class Block:
                 penetration = ball_radius - dist
                 if penetration > best_penetration:
                     best_penetration = penetration
+                    best_cx, best_cy = vx, vy
                     if dist > 0:
                         best_nx = dx / dist
                         best_ny = dy / dist
@@ -88,23 +90,30 @@ class Block:
         if not hit:
             return ball_x, ball_y, ball_dx, ball_dy, False
 
-        # Push ball out
-        ball_x += best_nx * best_penetration
-        ball_y += best_ny * best_penetration
+        # Position correction: place ball exactly at distance ball_radius from the closest point
+        ball_x = best_cx + best_nx * ball_radius
+        ball_y = best_cy + best_ny * ball_radius
 
-        # Reflect velocity
-        dot = ball_dx * best_nx + ball_dy * best_ny
-        if dot < 0:
-            ball_dx -= 2 * dot * best_nx
-            ball_dy -= 2 * dot * best_ny
-            ball_dx *= self.bounce
-            ball_dy *= self.bounce
+        # Velocity response
+        # Separate into normal and tangential components
+        vn = ball_dx * best_nx + ball_dy * best_ny
+        vt_x = ball_dx - vn * best_nx
+        vt_y = ball_dy - vn * best_ny
 
-        # Minimum velocity (original behavior)
-        speed = math.hypot(ball_dx, ball_dy)
-        if speed < 2.0:
-            scale = 2.0 / speed
-            ball_dx *= scale
-            ball_dy *= scale
+        # Resting threshold to avoid micro‑bounces
+        RESTING_THRESHOLD = 0.1
+        if vn < 0:  # moving into the surface
+            if -vn < RESTING_THRESHOLD:
+                vn = 0  # become resting
+            else:
+                vn = -vn * self.bounce   # normal bounce
+        # If moving away, leave vn unchanged
+
+        # No friction for now (keep tangential velocity as is)
+        # vt_x and vt_y remain unchanged
+
+        # Recompose velocity
+        ball_dx = vt_x + vn * best_nx
+        ball_dy = vt_y + vn * best_ny
 
         return ball_x, ball_y, ball_dx, ball_dy, True
