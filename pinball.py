@@ -11,6 +11,7 @@ from ball import Ball
 from obstacles import Obstacle
 from blocks import Block
 from flipper import Flipper
+from gamestate import GameState
 
 
 import os
@@ -50,6 +51,10 @@ class Pinball:
 
         # Set up the game window
         self.bg = None
+
+        # Start in Menu mode
+        self.state = GameState.MENU
+        self.score = 0
         
         if test_mode:
             self.screen = pygame.display.set_mode((self.settings.screen_width, 
@@ -523,98 +528,105 @@ class Pinball:
         self.b.move() # Split off gravity and speed clamping, ideally
 
 
-        
-
-    
-
 
     def run_game(self):
-        running = False  # Initially game is not running
-        paused = False   # Initially game is not paused
-        self.score = 0
-        
-        show_start_text = True  # Display "Press S to start" initially
-
-        # Main game loop
+        clock = pygame.time.Clock()
         while True:
-            if self.bg:
-                self.screen.blit(self.bg, (0, 0))  # Paint background
-            else:
-                print("WARNING: No background image!", flush=True)
-                self.screen.fill((0, 0, 0))  # Black background if no image
-            
-            # Draw start text first so it appears immediately
-            if not running and show_start_text:
-                f = pygame.font.Font(None, 36)
-                start_text = f.render("Press S to start", True, self.settings.wht)
-                self.screen.blit(start_text, ((self.settings.screen_width - start_text.get_width()) // 2, (self.settings.screen_height - start_text.get_height()) // 2))
-            
-            # Handle events
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_s:  # Start or resume the game
-                        if not running:
-                            running = True
-                            self.b.reset()
-                            self.score = 0
-                            show_start_text = False
-                    if event.key == pygame.K_r:
-                        self.b.reset()
-                    if event.key == pygame.K_LEFT:
-                        self.fl.active = True
-                        self.fl.activate()
-                    if event.key == pygame.K_RIGHT:
-                        self.fr.active = True
-                        self.fr.activate()
-                        
-                    elif event.key == pygame.K_p:  # Pause the game
-                        paused = not paused
-                elif event.type == pygame.KEYUP:
-                    if event.key == pygame.K_LEFT:
-                        self.fl.active = False
-                        self.fl.deactivate()
-                    if event.key == pygame.K_RIGHT:
-                        self.fr.active = False
-                        self.fr.deactivate()
+            self._handle_events()
+            self._update()
+            self._draw()
+            clock.tick(30)
 
-            
+    def _handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            # Dispatch to current state
+            if self.state == GameState.MENU:
+                self._handle_menu_event(event)
+            elif self.state == GameState.PLAYING:
+                self._handle_playing_event(event)
+            elif self.state == GameState.PAUSED:
+                self._handle_paused_event(event)
 
-            # Display start text if game not running
-            if not running and show_start_text:
-                f = pygame.font.Font(None, 36)
-                start_text = f.render("Press S to start", True, self.settings.wht)
-                self.screen.blit(start_text, ((self.settings.screen_width - start_text.get_width()) // 2, (self.settings.screen_height - start_text.get_height()) // 2))
-            elif running and paused:
-                f = pygame.font.Font(None, 36)
-                pause_text = f.render("Paused", True, self.settings.wht)
-                self.screen.blit(pause_text, ((self.settings.screen_width - pause_text.get_width()) // 2, (self.settings.screen_height - pause_text.get_height()) // 2))
+    def _handle_menu_event(self, event):
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+            self._start_game()
 
-            # If game is running, not paused
-            if running and not paused:
-                for i in range(self.settings.phys_runs):
-                    self.ball_physics()
+    def _handle_playing_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                self.fl.active = True
+                self.fl.activate()
+            elif event.key == pygame.K_RIGHT:
+                self.fr.active = True
+                self.fr.activate()
+            elif event.key == pygame.K_p:
+                self.state = GameState.PAUSED
+            elif event.key == pygame.K_r:   # reset ball (optional)
+                self.b.reset()
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_LEFT:
+                self.fl.active = False
+                self.fl.deactivate()
+            elif event.key == pygame.K_RIGHT:
+                self.fr.active = False
+                self.fr.deactivate()
 
-            # Draw game elements
-            self.fl.draw(self.screen)
-            self.fr.draw(self.screen)
-            self.b.draw_ball()
-            self.draw_obs()
-            if not self.test_mode:
-                self.draw_blocks()
+    def _handle_paused_event(self, event):
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+            self.state = GameState.PLAYING
 
-            # Display the current score
-            f = pygame.font.Font(None, 36)
-            score_text = f.render(f'Score: {self.score}', True, self.settings.wht)
-            self.screen.blit(score_text, (20, 20))
+    def _start_game(self):
+        self.state = GameState.PLAYING
+        self.b.reset()
+        self.score = 0
 
-            # Update the display
-            pygame.display.flip()
+    def _update(self):
+        if self.state == GameState.PLAYING:
+            for _ in range(self.settings.phys_runs):
+                self.ball_physics()   # we'll refactor this later
 
-            # Control the frame rate
-            pygame.time.Clock().tick(30)
+    def _draw(self):
+        # Common drawing (background, score, game objects)
+        if self.bg:
+            self.screen.blit(self.bg, (0, 0))
+        else:
+            self.screen.fill((0, 0, 0))
+
+        # Draw game elements
+        self.fl.draw(self.screen)
+        self.fr.draw(self.screen)
+        self.b.draw_ball()
+        self.draw_obs()
+        if not self.test_mode:
+            self.draw_blocks()
+
+        # Draw overlay text based on state
+        if self.state == GameState.MENU:
+            self._draw_menu_text()
+        elif self.state == GameState.PAUSED:
+            self._draw_paused_text()
+
+        # Score display (always)
+        f = pygame.font.Font(None, 36)
+        score_text = f.render(f'Score: {self.score}', True, self.settings.wht)
+        self.screen.blit(score_text, (20, 20))
+
+        pygame.display.flip()
+
+    def _draw_menu_text(self):
+        f = pygame.font.Font(None, 36)
+        text = f.render("Press S to start", True, self.settings.wht)
+        self.screen.blit(text, ((self.settings.screen_width - text.get_width()) // 2,
+                                (self.settings.screen_height - text.get_height()) // 2))
+
+    def _draw_paused_text(self):
+        f = pygame.font.Font(None, 36)
+        text = f.render("Paused", True, self.settings.wht)
+        self.screen.blit(text, ((self.settings.screen_width - text.get_width()) // 2,
+                                (self.settings.screen_height - text.get_height()) // 2))
 
     def run_test(self, num_frames=500):
         print(f"=== HEADLESS TEST MODE ({num_frames} frames) ===")
