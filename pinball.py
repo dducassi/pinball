@@ -8,7 +8,7 @@ import math
 import argparse
 from settings import Settings
 from ball import Ball
-from obstacles import Obstacle
+from bumpers import Bumper
 from blocks import Block
 from flipper import Flipper
 from gamestate import GameState
@@ -74,19 +74,19 @@ class Pinball:
         self.fr = Flipper(5/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, self.settings.f_length, -0.6, False)
     
         
-        # Generate bumpers (obs) and block elements
-        self.obs = []
+        # Generate bumpers and block elements
+        self.bumpers = []
         self.blocks = [] 
         self.flippers = [self.fl, self.fr]
         self.table_builder = TableBuilder(self.settings)
-        self.obs = self.table_builder.generate_obstacles()
+        self.bumpers = self.table_builder.generate_bumpers()
         self.blocks = self.table_builder.generate_blocks()
-        self.physics_engine = PhysicsEngine(self.b, self.flippers, self.obs, self.blocks, self.settings)
+        self.physics_engine = PhysicsEngine(self.b, self.flippers, self.bumpers, self.blocks, self.settings)
 
 
-    def draw_obs(self):
-        for ob in self.obs:
-            pygame.draw.circle(self.screen, ob.c, (ob.x, ob.y), self.settings.orad)
+    def draw_bumpers(self):
+        for bumper in self.bumpers:
+            pygame.draw.circle(self.screen, bumper.c, (bumper.x, bumper.y), self.settings.bump_rad)
     
     def draw_blocks(self):
         for block in self.blocks:
@@ -154,18 +154,17 @@ class Pinball:
         if self.state == GameState.PLAYING:
             for _ in range(self.settings.phys_runs):
                 events = self.physics_engine.update()
-                # Process events (score and color change)
                 for event in events:
-                    if event[0] == 'obstacle_hit':
-                        obs = event[1]
+                    if event[0] == 'bumper_hit':  
+                        bumper = event[1]
                         self.increment_score()
-                        # Cycle obstacle color (original logic)
-                        if obs.c == self.settings.red:
-                            obs.c = self.settings.blu
-                        elif obs.c == self.settings.blu:
-                            obs.c = self.settings.ylw
-                        elif obs.c == self.settings.ylw:
-                            obs.c = self.settings.red
+                        # Cycle bumper color
+                        if bumper.c == self.settings.red:
+                            bumper.c = self.settings.blu
+                        elif bumper.c == self.settings.blu:
+                            bumper.c = self.settings.ylw
+                        elif bumper.c == self.settings.ylw:
+                            bumper.c = self.settings.red
 
             # Ball out-of-bounds check
             if self.b.check_collision():
@@ -184,7 +183,7 @@ class Pinball:
         self.fl.draw(self.screen)
         self.fr.draw(self.screen)
         self.b.draw_ball()
-        self.draw_obs()
+        self.draw_bumpers()
         if not self.test_mode:
             self.draw_blocks()
 
@@ -231,7 +230,7 @@ class Pinball:
             
             events = self.physics_engine.update()
             for event in events:
-                if event[0] == 'obstacle_hit':
+                if event[0] == 'bumper_hit':
                     self.increment_score()
             
             if frame % 50 == 0:
