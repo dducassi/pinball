@@ -58,6 +58,7 @@ class PhysicsEngine:
     def update(self):
         """Run one physics step and send notifications."""
 
+
         # Update flipper angles (original first lines of ball_physics)
         for f in self.flippers:
             f.update()
@@ -76,6 +77,7 @@ class PhysicsEngine:
         ball_dx = ball.dx
         ball_dy = ball.dy
 
+        RESTING_THRESHOLD = 0.9
         # --- Flipper collisions (exact copy from original ball_physics) ---
         for f in self.flippers:
             pivot_x, pivot_y = f.pivot
@@ -176,8 +178,18 @@ class PhysicsEngine:
                         #ball_dx *= scale
                         #ball_dy *= scale
 
+                rel_vn = (ball_dx - tip_vx) * nx + (ball_dy - tip_vy) * ny
+                if abs(rel_vn) < RESTING_THRESHOLD:
+                    # Match ball's normal velocity to flipper's surface
+                    vn_target = tip_vx * nx + tip_vy * ny
+                    current_vn = ball_dx * nx + ball_dy * ny
+                    ball_dx += (vn_target - current_vn) * nx
+                    ball_dy += (vn_target - current_vn) * ny
+
                 # Break after handling a hit
                 print(f"[Swept CCD] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
+
+                
                 
                 break
 
@@ -232,6 +244,18 @@ class PhysicsEngine:
                         #scale = 2.0 / speed
                         #ball_dx *= scale
                         #ball_dy *= scale
+                    rel_vn = (ball_dx - tip_vx) * nx + (ball_dy - tip_vy) * ny
+                    if abs(rel_vn) < RESTING_THRESHOLD:
+                        # Match ball's normal velocity to flipper's surface
+                        vn_target = tip_vx * nx + tip_vy * ny
+                        current_vn = ball_dx * nx + ball_dy * ny
+                        ball_dx += (vn_target - current_vn) * nx
+                        ball_dy += (vn_target - current_vn) * ny
+
+                    # Break after handling a hit
+                    print(f"[FALLBACK] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
+
+                    break
 
                    
 
@@ -280,6 +304,56 @@ class PhysicsEngine:
         ball.y = ball_y
         ball.dx = ball_dx
         ball.dy = ball_dy
+
+        # --- Trapped detection (ball between flipper and block) ---
+        TRAP_SPEED_THRESH = 0.2
+        TRAP_DIST_EPSILON = 1.0  # extra allowance beyond ball_radius
+
+        if not ball.trapped and math.hypot(ball_dx, ball_dy) < TRAP_SPEED_THRESH:
+            # Check if ball is near any flipper
+            near_flipper = False
+            for f in self.flippers:
+                # Simplified distance to flipper (use closest point on rectangle)
+                pivot_x, pivot_y = f.pivot
+                angle = f.angle
+                length = f.length
+                width = f.width
+                dx = ball_x - pivot_x
+                dy = ball_y - pivot_y
+                cos_a = math.cos(angle)
+                sin_a = math.sin(angle)
+                local_x = dx * cos_a + dy * sin_a
+                local_y = -dx * sin_a + dy * cos_a
+                rect_left = min(0, length)
+                rect_right = max(0, length)
+                rect_top = -width / 2
+                rect_bottom = width / 2
+                closest_x = max(rect_left, min(local_x, rect_right))
+                closest_y = max(rect_top, min(local_y, rect_bottom))
+                dist = math.hypot(local_x - closest_x, local_y - closest_y)
+                if dist < ball_radius + TRAP_DIST_EPSILON:
+                    near_flipper = True
+                    break
+
+            if near_flipper:
+                # Check if ball is near any block
+                near_block = False
+                for block in self.blocks:
+                    # Use block's edges to find closest distance
+                    for (x1, y1, x2, y2) in block.edges:
+                        cx, cy = block._closest_point_on_segment(ball_x, ball_y, x1, y1, x2, y2)
+                        dist = math.hypot(ball_x - cx, ball_y - cy)
+                        if dist < ball_radius + TRAP_DIST_EPSILON:
+                            near_block = True
+                            break
+                    if near_block:
+                        break
+
+                if near_block:
+                    # Trapped!
+                    ball.trapped = True
+                    ball.dx = 0
+                    ball.dy = 0
 
         # Original ball.move() call (gravity, friction, walls)
         ball.move()
