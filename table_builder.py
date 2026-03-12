@@ -1,40 +1,40 @@
-from obstacles import Obstacle
+from bumpers import Bumper
 from blocks import Block
 
 class TableBuilder:
     def __init__(self, settings):
         self.settings = settings
 
-    def generate_obstacles(self):
-        """Return a list of obstacles for the table."""
-        obs = []
-        # Original gen_obs logic
+    def generate_bumpers(self):
+        """Return a list of bumpers for the table."""
+        bumpers = []
         x = self.settings.screen_width / 2
         y = (self.settings.screen_height) / 5
         c = self.settings.blu
-        obs.append(Obstacle(x, y, c))
+        bumpers.append(Bumper(x, y, c))   # using Bumper
 
         x = 0
         y = 0
         c = self.settings.blu
-        obs.append(Obstacle(x, y, c))
+        bumpers.append(Bumper(x, y, c))
 
         x = self.settings.screen_width
         y = 0
         c = self.settings.blu
-        obs.append(Obstacle(x, y, c))
+        bumpers.append(Bumper(x, y, c))
 
-        x = .22 * self.settings.orad
+        x = .22 * self.settings.bump_rad
         y = 6/7 * (self.settings.screen_height)
         c = self.settings.blu
-        obs.append(Obstacle(x, y, c))
+        bumpers.append(Bumper(x, y, c))
 
-        x = self.settings.screen_width - .22 * self.settings.orad
+        x = self.settings.screen_width - .22 * self.settings.bump_rad
         y = 6/7 * (self.settings.screen_height)
         c = self.settings.blu
-        obs.append(Obstacle(x, y, c))
+        bumpers.append(Bumper(x, y, c))
 
-        return obs
+        return bumpers
+
 
     def generate_blocks(self):
         """Return a list of blocks for the table."""
