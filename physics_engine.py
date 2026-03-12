@@ -1,10 +1,10 @@
 import math
 
 class PhysicsEngine:
-    def __init__(self, ball, flippers, obstacles, blocks, settings):
+    def __init__(self, ball, flippers, bumpers, blocks, settings):
         self.ball = ball
         self.flippers = flippers
-        self.obstacles = obstacles
+        self.bumpers = bumpers
         self.blocks = blocks
         self.settings = settings
 
@@ -286,22 +286,22 @@ class PhysicsEngine:
                             ball_x = x4 - ball_radius
                             ball_dx = -ball_dx * bounce
 
-        # --- Obstacle collisions ---
-        for obs in self.obstacles:
-            ox, oy = obs.x, obs.y
-            orad = settings.orad
+        # --- Bumpers collisions ---
+        for bumper in self.bumpers:
+            bump_x, bump_y = bumper.x, bumper.y
+            bump_rad = settings.bump_rad
 
-            dx = ball_x - ox
-            dy = ball_y - oy
+            dx = ball_x - bump_x
+            dy = ball_y - bump_y
             dist = math.hypot(dx, dy)
 
-            if dist < ball_radius + orad:
+            if dist < ball_radius + bump_rad:
                 if dist > 0:
-                    ball_x = ox + (dx / dist) * (ball_radius + orad + 0.5)
-                    ball_y = oy + (dy / dist) * (ball_radius + orad + 0.5)
+                    ball_x = bump_x + (dx / dist) * (ball_radius + bump_rad + 0.5)
+                    ball_y = bump_y + (dy / dist) * (ball_radius + bump_rad + 0.5)
                 else:
-                    ball_x = ox + (ball_radius + orad + 0.5)
-                    ball_y = oy
+                    ball_x = bump_x + (ball_radius + bump_rad + 0.5)
+                    ball_y = bump_y
 
                 nx = dx / dist if dist > 0 else 1
                 ny = dy / dist if dist > 0 else 0
@@ -309,11 +309,11 @@ class PhysicsEngine:
                 if dot < -1e-3:
                     ball_dx -= 2 * dot * nx
                     ball_dy -= 2 * dot * ny
-                    ball_dx *= settings.obs_bounce
-                    ball_dy *= settings.obs_bounce
+                    ball_dx *= settings.bump_bounce
+                    ball_dy *= settings.bump_bounce
 
                 # Record event for scoring and color change
-                events.append(('obstacle_hit', obs))
+                events.append(('bumper_hit', bumper))
 
         # Apply final ball state
         ball.x = ball_x
