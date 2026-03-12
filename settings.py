@@ -21,10 +21,9 @@ class Settings:
 
         # Flipper properties
         self.f_length = 4/21 * self.screen_width
-        self.flip_force = 1.25
-        self.deadf_bounce = 0.9
+        self.deadf_bounce = 0.7
         self.collision_samples = 4  # Number of path samples
-        self.collision_tolerance = 2  # Collision margin
+        self.collision_tolerance = 1  # Collision margin
 
         # Bumper properties
         self.bump_rad = 8/100 * self.screen_height   # bumper radius
