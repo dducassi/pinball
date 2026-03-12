@@ -157,25 +157,21 @@ class PhysicsEngine:
                 contact_vx = -math.sin(angle) * contact_speed
                 contact_vy = math.cos(angle) * contact_speed
 
-                # Reflect velocity
-                dot = ball_dx * nx + ball_dy * ny
-                if dot < 0:
-                    ball_dx -= 2 * dot * nx
-                    ball_dy -= 2 * dot * ny
+               # --- Unified restitution‑based reflection ---
+                restitution = settings.restitution
+                v_rel_x = ball_dx - contact_vx
+                v_rel_y = ball_dy - contact_vy
+                v_rel_n = v_rel_x * nx + v_rel_y * ny
+                if v_rel_n < 0:  # moving into the surface
+                    v_rel_t_x = v_rel_x - v_rel_n * nx
+                    v_rel_t_y = v_rel_y - v_rel_n * ny
+                    v_rel_n_after = -restitution * v_rel_n
+                    ball_dx = contact_vx + v_rel_n_after * nx + v_rel_t_x
+                    ball_dy = contact_vy + v_rel_n_after * ny + v_rel_t_y
 
-                    if f.active:
-                        # Use contact point velocity instead of tip velocity
-                        ball_dx += contact_vx * (settings.phys_runs / 2)
-                        ball_dy += contact_vy * (settings.phys_runs / 2)
-                    else:
-                        bounce = settings.deadf_bounce
-                        ball_dx *= bounce
-                        ball_dy *= bounce
-
-                # Resting detection (using contact point velocity)
+                # Resting detection
                 rel_vn = (ball_dx - contact_vx) * nx + (ball_dy - contact_vy) * ny
                 if abs(rel_vn) < RESTING_THRESHOLD:
-                    # Match ball's normal velocity to flipper's surface at contact point
                     vn_target = contact_vx * nx + contact_vy * ny
                     current_vn = ball_dx * nx + ball_dy * ny
                     ball_dx += (vn_target - current_vn) * nx
@@ -185,72 +181,9 @@ class PhysicsEngine:
                 print(f"[Swept CCD] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
 
                 
-                
                 break
 
-            else:
-                # Fallback: static overlap resolution
-                closest_x = max(rect_left, min(local_x2, rect_right))
-                closest_y = max(rect_top, min(local_y2, rect_bottom))
-                dist_x = local_x2 - closest_x
-                dist_y = local_y2 - closest_y
-                distance = math.hypot(dist_x, dist_y)
-
-                if distance < ball_radius:
-                    if distance > 1e-6:
-                        normal_local = (dist_x / distance, dist_y / distance)
-                    else:
-                        rect_cx = (rect_left + rect_right) / 2
-                        rect_cy = (rect_top + rect_bottom) / 2
-                        fallback_dx = local_x2 - rect_cx
-                        fallback_dy = local_y2 - rect_cy
-                        fb_len = math.hypot(fallback_dx, fallback_dy) or 1.0
-                        normal_local = (fallback_dx / fb_len, fallback_dy / fb_len)
-
-                    nx = normal_local[0] * cos_a - normal_local[1] * sin_a
-                    ny = normal_local[0] * sin_a + normal_local[1] * cos_a
-
-                    overlap = ball_radius - distance + 1.0
-                    ball_x += nx * overlap
-                    ball_y += ny * overlap
-
-                    tip_speed = f.angular_vel * length
-                    tip_vx = -math.sin(angle) * tip_speed
-                    tip_vy = math.cos(angle) * tip_speed
-
-                    dot = ball_dx * nx + ball_dy * ny
-                    if dot < 0:
-                        ball_dx -= 2 * dot * nx
-                        ball_dy -= 2 * dot * ny
-
-                    if f.active:
-                        ball_dx += tip_vx * (settings.phys_runs / 2)
-                        ball_dy += tip_vy * (settings.phys_runs / 2)
-                    else:
-                        bounce = settings.deadf_bounce
-                        ball_dx *= bounce
-                        ball_dy *= bounce
-
-                    speed = math.hypot(ball_dx, ball_dy)
-
-                    # Minimum velocity
-                    # speed = math.hypot(ball_dx, ball_dy)
-                    # if speed < 2.0:
-                        #scale = 2.0 / speed
-                        #ball_dx *= scale
-                        #ball_dy *= scale
-                    rel_vn = (ball_dx - tip_vx) * nx + (ball_dy - tip_vy) * ny
-                    if abs(rel_vn) < RESTING_THRESHOLD:
-                        # Match ball's normal velocity to flipper's surface
-                        vn_target = tip_vx * nx + tip_vy * ny
-                        current_vn = ball_dx * nx + ball_dy * ny
-                        ball_dx += (vn_target - current_vn) * nx
-                        ball_dy += (vn_target - current_vn) * ny
-
-                    # Break after handling a hit
-                    print(f"[FALLBACK] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
-
-                    break
+         
 
                    
 
