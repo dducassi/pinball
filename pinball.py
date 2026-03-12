@@ -137,9 +137,15 @@ class Pinball:
             if event.key == pygame.K_LEFT:
                 self.fl.active = False
                 self.fl.deactivate()
+                if self.b.trapped:
+                    self.b.trapped = False
+                    self.b.dy = 0.21   # nudge downward to escape trap
             elif event.key == pygame.K_RIGHT:
                 self.fr.active = False
                 self.fr.deactivate()
+                if self.b.trapped:
+                    self.b.trapped = False
+                    self.b.dy = 0.21   # nudge downward to escape trap
 
     def _handle_paused_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
@@ -148,6 +154,7 @@ class Pinball:
     def _start_game(self):
         self.state = GameState.PLAYING
         self.b.reset()
+        self.b.trapped = False
         self.score_manager.reset()
 
     def _update(self):
@@ -159,6 +166,7 @@ class Pinball:
             if self.b.check_collision():
                 time.sleep(1.5)
                 self.b.reset()
+                self.b.trapped = False
                 self.score_manager.reset() 
 
     def _draw(self):
