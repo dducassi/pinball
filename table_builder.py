@@ -8,16 +8,21 @@ class TableBuilder:
     def generate_bumpers(self):
         """Return a list of bumpers for the table."""
         bumpers = []
+
+        # Central orb bumper
         x = self.settings.screen_width / 2
         y = (self.settings.screen_height) / 5
         c = self.settings.blu
-        bumpers.append(Bumper(x, y, c))   # using Bumper
+        bumpers.append(Bumper(x, y, c))   
 
+        # Top left bumper
         x = 0
         y = 0
         c = self.settings.blu
         bumpers.append(Bumper(x, y, c))
 
+
+        # Top right bumper
         x = self.settings.screen_width
         y = 0
         c = self.settings.blu
@@ -39,28 +44,25 @@ class TableBuilder:
     def generate_blocks(self):
         """Return a list of blocks for the table."""
         blocks = []
-        # Left lower block
-        x1 = 0
-        y1 = self.settings.screen_height
-        x2 = 0
-        y2 = self.settings.screen_height - (3/14) * self.settings.screen_height
-        x3 = (2/7) * self.settings.screen_width
-        y3 = self.settings.screen_height - (1/14) * self.settings.screen_height
-        x4 = (2/7) * self.settings.screen_width
-        y4 = self.settings.screen_height
-        c = self.settings.gry
-        blocks.append(Block(x1, y1, x2, y2, x3, y3, x4, y4, c))
+        w = self.settings.screen_width
+        h = self.settings.screen_height
 
-        # Right lower block
-        x1 = self.settings.screen_width
-        y1 = self.settings.screen_height
-        x2 = self.settings.screen_width
-        y2 = self.settings.screen_height - (3/14) * self.settings.screen_height
-        x3 = self.settings.screen_width - (2/7) * self.settings.screen_width
-        y3 = self.settings.screen_height - (1/14) * self.settings.screen_height
-        x4 = self.settings.screen_width - (2/7) * self.settings.screen_width
-        y4 = self.settings.screen_height
-        c = self.settings.gry
-        blocks.append(Block(x1, y1, x2, y2, x3, y3, x4, y4, c))
+        # Left lower block vertices (order: bottom-left, top-left, top-right, bottom-right)
+        left_vertices = [
+            (0, h),
+            (0, h - 3/14 * h),
+            (2/7 * w, h - 1/14 * h),
+            (2/7 * w, h)
+        ]
+        blocks.append(Block(left_vertices, self.settings.gry, bounce=self.settings.block_bounce))
+
+        # Right lower block vertices
+        right_vertices = [
+            (w, h),
+            (w, h - 3/14 * h),
+            (w - 2/7 * w, h - 1/14 * h),
+            (w - 2/7 * w, h)
+        ]
+        blocks.append(Block(right_vertices, self.settings.gry, bounce=self.settings.block_bounce))
 
         return blocks
