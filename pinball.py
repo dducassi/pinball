@@ -14,6 +14,8 @@ from flipper import Flipper
 from gamestate import GameState
 from physics_engine import PhysicsEngine
 from table_builder import TableBuilder
+from notification_center import NotificationCenter
+from score_manager import ScoreManager
 
 
 import os
@@ -56,7 +58,6 @@ class Pinball:
 
         # Start in Menu mode
         self.state = GameState.MENU
-        self.score = 0
         
         if test_mode:
             self.screen = pygame.display.set_mode((self.settings.screen_width, 
@@ -68,6 +69,9 @@ class Pinball:
                                             base_dir, 'wizard.png'))
         pygame.display.set_caption('Wizard Pinball')
         
+        self.notification_center = NotificationCenter()
+        self.score_manager = ScoreManager(self.notification_center, self.settings)
+
         # Initialize the ball and flippers
         self.b = Ball(self)
         self.fl = Flipper(2/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, self.settings.f_length, 0.6, True)
@@ -81,7 +85,7 @@ class Pinball:
         self.table_builder = TableBuilder(self.settings)
         self.bumpers = self.table_builder.generate_bumpers()
         self.blocks = self.table_builder.generate_blocks()
-        self.physics_engine = PhysicsEngine(self.b, self.flippers, self.bumpers, self.blocks, self.settings)
+        self.physics_engine = PhysicsEngine(self.b, self.flippers, self.bumpers, self.blocks, self.settings, self.notification_center)
 
 
     def draw_bumpers(self):
@@ -91,10 +95,6 @@ class Pinball:
     def draw_blocks(self):
         for block in self.blocks:
             pygame.draw.polygon(self.screen, block.c, [(block.x1, block.y1), (block.x2, block.y2), (block.x3, block.y3), (block.x4, block.y4)])
-
-    def increment_score(self):
-        self.score += self.settings.pph # Score goes up
-
 
     def run_game(self):
         clock = pygame.time.Clock()
@@ -148,29 +148,18 @@ class Pinball:
     def _start_game(self):
         self.state = GameState.PLAYING
         self.b.reset()
-        self.score = 0
+        self.score_manager.reset()
 
     def _update(self):
         if self.state == GameState.PLAYING:
             for _ in range(self.settings.phys_runs):
-                events = self.physics_engine.update()
-                for event in events:
-                    if event[0] == 'bumper_hit':  
-                        bumper = event[1]
-                        self.increment_score()
-                        # Cycle bumper color
-                        if bumper.c == self.settings.red:
-                            bumper.c = self.settings.blu
-                        elif bumper.c == self.settings.blu:
-                            bumper.c = self.settings.ylw
-                        elif bumper.c == self.settings.ylw:
-                            bumper.c = self.settings.red
+                self.physics_engine.update()
 
             # Ball out-of-bounds check
             if self.b.check_collision():
                 time.sleep(1.5)
                 self.b.reset()
-                self.score = 0
+                self.score_manager.reset() 
 
     def _draw(self):
         # Common drawing (background, score, game objects)
@@ -184,6 +173,7 @@ class Pinball:
         self.fr.draw(self.screen)
         self.b.draw_ball()
         self.draw_bumpers()
+        
         if not self.test_mode:
             self.draw_blocks()
 
@@ -195,7 +185,7 @@ class Pinball:
 
         # Score display (always)
         f = pygame.font.Font(None, 36)
-        score_text = f.render(f'Score: {self.score}', True, self.settings.wht)
+        score_text = f.render(f'Score: {self.score_manager.score}', True, self.settings.wht)
         self.screen.blit(score_text, (20, 20))
 
         pygame.display.flip()
@@ -214,7 +204,7 @@ class Pinball:
 
     def run_test(self, num_frames=500):
         print(f"=== HEADLESS TEST MODE ({num_frames} frames) ===")
-        self.score = 0
+        self.score_manager.reset()   # ensure score starts at 0
         running = True
         frame = 0
         
@@ -228,22 +218,19 @@ class Pinball:
             except:
                 pass
             
-            events = self.physics_engine.update()
-            for event in events:
-                if event[0] == 'bumper_hit':
-                    self.increment_score()
+            self.physics_engine.update()
             
             if frame % 50 == 0:
-                print(f"Frame {frame}: ball at ({self.b.x:.1f}, {self.b.y:.1f}), velocity ({self.b.dx:.2f}, {self.b.dy:.2f}), score={self.score}")
+                print(f"Frame {frame}: ball at ({self.b.x:.1f}, {self.b.y:.1f}), velocity ({self.b.dx:.2f}, {self.b.dy:.2f}), score={self.score_manager.score}")
             
             if self.b.check_collision():
                 print(f"Frame {frame}: BALL RESET - final position ({self.b.x}, {self.b.y})")
                 self.b.reset()
-                self.score = 0
+                self.score_manager.reset()
             
             frame += 1
         
-        print(f"=== TEST COMPLETE - Final score: {self.score} ===")
+        print(f"=== TEST COMPLETE - Final score: {self.score_manager.score} ===")
         pygame.quit()
         input("Press Enter to exit...")
 
