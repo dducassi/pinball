@@ -147,7 +147,7 @@ class PhysicsEngine:
                 ny = nx_local * sin_a + ny_local * cos_a
 
                 # Push ball out
-                push_dist = 2.0
+                push_dist = f.width / 2
                 ball_x += nx * push_dist
                 ball_y += ny * push_dist
 
