@@ -77,7 +77,7 @@ class PhysicsEngine:
         ball_dx = ball.dx
         ball_dy = ball.dy
 
-        RESTING_THRESHOLD = 0.9
+        RESTING_THRESHOLD = 0.75
         # --- Flipper collisions (exact copy from original ball_physics) ---
         for f in self.flippers:
             pivot_x, pivot_y = f.pivot
@@ -151,10 +151,11 @@ class PhysicsEngine:
                 ball_x += nx * push_dist
                 ball_y += ny * push_dist
 
-                # Flipper tip velocity
-                tip_speed = f.angular_vel * length
-                tip_vx = -math.sin(angle) * tip_speed
-                tip_vy = math.cos(angle) * tip_speed
+               # Compute contact point velocity (varies with distance from pivot)
+                contact_dist = local_contact_x
+                contact_speed = f.angular_vel * contact_dist
+                contact_vx = -math.sin(angle) * contact_speed
+                contact_vy = math.cos(angle) * contact_speed
 
                 # Reflect velocity
                 dot = ball_dx * nx + ball_dy * ny
@@ -163,25 +164,19 @@ class PhysicsEngine:
                     ball_dy -= 2 * dot * ny
 
                     if f.active:
-                        
-                        ball_dx += tip_vx * (settings.phys_runs / 2)
-                        ball_dy += tip_vy * (settings.phys_runs / 2)
+                        # Use contact point velocity instead of tip velocity
+                        ball_dx += contact_vx * (settings.phys_runs / 2)
+                        ball_dy += contact_vy * (settings.phys_runs / 2)
                     else:
                         bounce = settings.deadf_bounce
                         ball_dx *= bounce
                         ball_dy *= bounce
 
-                    # Minimum velocity
-                    # speed = math.hypot(ball_dx, ball_dy)
-                    # if speed < 2.0:
-                        #scale = 2.0 / speed
-                        #ball_dx *= scale
-                        #ball_dy *= scale
-
-                rel_vn = (ball_dx - tip_vx) * nx + (ball_dy - tip_vy) * ny
+                # Resting detection (using contact point velocity)
+                rel_vn = (ball_dx - contact_vx) * nx + (ball_dy - contact_vy) * ny
                 if abs(rel_vn) < RESTING_THRESHOLD:
-                    # Match ball's normal velocity to flipper's surface
-                    vn_target = tip_vx * nx + tip_vy * ny
+                    # Match ball's normal velocity to flipper's surface at contact point
+                    vn_target = contact_vx * nx + contact_vy * ny
                     current_vn = ball_dx * nx + ball_dy * ny
                     ball_dx += (vn_target - current_vn) * nx
                     ball_dy += (vn_target - current_vn) * ny
