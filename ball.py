@@ -20,6 +20,7 @@ class Ball():
         self.settings = bb_game.settings
         self.screen_rect = bb_game.screen.get_rect()
         self.reset()
+        self.trapped = False
     
     def reset(self):
 
@@ -31,6 +32,10 @@ class Ball():
         self.dy = self.settings.bs * 1.1
 
     def move(self):
+
+        # Don't move if ball is trapped
+        if self.trapped:
+            return
 
         # Account for friction causing loss of inertia
         self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
@@ -78,15 +83,6 @@ class Ball():
             self.dx = -(abs(0.8 * self.dx))
             self.dy = self.dy * 0.8
         
-        
-        
-        ### If the ball hits a 45 degree wall, dx an dy should trade places!
-
-        # top left corner
-        #if self.x <= 125:
-            #if self.y <= 125:
-                #self.dx, self.dy = -self.dy, self.dx
-        
             
         # Bounce off the top wall or signal game over if it hits the bottom
         if self.y <= self.settings.br:
@@ -94,7 +90,7 @@ class Ball():
             
             self.dy = abs(0.8 * self.dy)
             self.dx = self.dx * 0.8
-        elif self.y >= self.settings.screen_height + 500:
+        elif self.y >= self.settings.screen_height * 1.2:
             return True
         return False
     
