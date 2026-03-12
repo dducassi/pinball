@@ -94,7 +94,7 @@ class Pinball:
     
     def draw_blocks(self):
         for block in self.blocks:
-            pygame.draw.polygon(self.screen, block.c, [(block.x1, block.y1), (block.x2, block.y2), (block.x3, block.y3), (block.x4, block.y4)])
+            pygame.draw.polygon(self.screen, block.c, block.vertices)
 
     def run_game(self):
         clock = pygame.time.Clock()
