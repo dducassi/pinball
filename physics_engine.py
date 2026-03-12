@@ -1,12 +1,13 @@
 import math
 
 class PhysicsEngine:
-    def __init__(self, ball, flippers, bumpers, blocks, settings):
+    def __init__(self, ball, flippers, bumpers, blocks, settings, notification_center):
         self.ball = ball
         self.flippers = flippers
         self.bumpers = bumpers
         self.blocks = blocks
         self.settings = settings
+        self.notification_center = notification_center
 
     def swept_circle_vs_aabb(self, p0, p1, radius, rect_left, rect_right, rect_top, rect_bottom):
         """
@@ -55,8 +56,7 @@ class PhysicsEngine:
         return True, (contact_x, contact_y)
 
     def update(self):
-        """Run one physics step and return a list of events."""
-        events = []
+        """Run one physics step and send notifications."""
 
         # Update flipper angles (original first lines of ball_physics)
         for f in self.flippers:
@@ -312,8 +312,8 @@ class PhysicsEngine:
                     ball_dx *= settings.bump_bounce
                     ball_dy *= settings.bump_bounce
 
-                # Record event for scoring and color change
-                events.append(('bumper_hit', bumper))
+                # Record notifications for scoring and color change
+                self.notification_center.post_notification('bumper_hit', bumper)
 
         # Apply final ball state
         ball.x = ball_x
@@ -323,5 +323,3 @@ class PhysicsEngine:
 
         # Original ball.move() call (gravity, friction, walls)
         ball.move()
-
-        return events
