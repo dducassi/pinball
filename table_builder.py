@@ -28,15 +28,15 @@ class TableBuilder:
         c = self.settings.blu
         bumpers.append(Bumper(x, y, c))
 
-        x = .22 * self.settings.bump_rad
-        y = 6/7 * (self.settings.screen_height)
-        c = self.settings.blu
-        bumpers.append(Bumper(x, y, c))
+        #x = .22 * self.settings.bump_rad
+        #y = 6/7 * (self.settings.screen_height)
+        #c = self.settings.blu
+        #bumpers.append(Bumper(x, y, c))
 
-        x = self.settings.screen_width - .22 * self.settings.bump_rad
-        y = 6/7 * (self.settings.screen_height)
-        c = self.settings.blu
-        bumpers.append(Bumper(x, y, c))
+        #x = self.settings.screen_width - .22 * self.settings.bump_rad
+        #y = 6/7 * (self.settings.screen_height)
+        #c = self.settings.blu
+        #bumpers.append(Bumper(x, y, c))
 
         return bumpers
 
@@ -54,7 +54,7 @@ class TableBuilder:
             (2/7 * w, h - 1/14 * h),
             (2/7 * w, h)
         ]
-        blocks.append(Block(left_vertices, self.settings.gry, bounce=self.settings.block_bounce))
+        blocks.append(Block(left_vertices, self.settings.gry, restitution=self.settings.restitution))
 
         # Right lower block vertices
         right_vertices = [
@@ -63,6 +63,6 @@ class TableBuilder:
             (w - 2/7 * w, h - 1/14 * h),
             (w - 2/7 * w, h)
         ]
-        blocks.append(Block(right_vertices, self.settings.gry, bounce=self.settings.block_bounce))
+        blocks.append(Block(right_vertices, self.settings.gry, restitution=self.settings.restitution))
 
         return blocks
