@@ -12,6 +12,7 @@ from obstacles import Obstacle
 from blocks import Block
 from flipper import Flipper
 from gamestate import GameState
+from physics_engine import PhysicsEngine
 
 
 import os
@@ -78,6 +79,7 @@ class Pinball:
         self.flippers = [self.fl, self.fr]
         self.gen_obs()
         self.gen_blocks()
+        self.physics_engine = PhysicsEngine(self.b, self.flippers, self.obs, self.blocks, self.settings)
 
     def gen_obs(self):
         x = self.settings.screen_width / 2
@@ -144,391 +146,6 @@ class Pinball:
         self.score += self.settings.pph # Score goes up
 
 
-    def swept_circle_vs_aabb(self, p0, p1, radius, rect_left, rect_right, rect_top, rect_bottom):
-        """
-        Checks if a circle of given radius moving from p0 to p1 collides with AABB defined by rect_*.
-        Returns (hit, contact_point)
-        """
-
-        # Expand rectangle by radius
-        r_left = rect_left - radius
-        r_right = rect_right + radius
-        r_top = rect_top - radius
-        r_bottom = rect_bottom + radius
-
-        # Get delta
-        dx = p1[0] - p0[0]
-        dy = p1[1] - p0[1]
-
-        t_entry = 0.0
-        t_exit = 1.0
-
-        for axis in range(2):
-            if axis == 0:
-                p = p0[0]
-                d = dx
-                min_b = r_left
-                max_b = r_right
-            else:
-                p = p0[1]
-                d = dy
-                min_b = r_top
-                max_b = r_bottom
-
-            if abs(d) < 1e-8:
-                if p < min_b or p > max_b:
-                    return False, None
-            else:
-                t1 = (min_b - p) / d
-                t2 = (max_b - p) / d
-                t_min = min(t1, t2)
-                t_max = max(t1, t2)
-                t_entry = max(t_entry, t_min)
-                t_exit = min(t_exit, t_max)
-                if t_entry > t_exit:
-                    return False, None
-
-        contact_x = p0[0] + dx * t_entry
-        contact_y = p0[1] + dy * t_entry
-        return True, (contact_x, contact_y)
-        
-
-    def ball_physics(self):
-        
-        # Move flippers for fresh collision state
-        self.fl.update()
-        self.fr.update()
-
-        next_x = self.b.x + self.b.dx
-        next_y = self.b.y + self.b.dy
-
-        
-
-        # Use local vars for ball position and velocity
-        ball_x = self.b.x
-        ball_y = self.b.y
-        ball_dx = self.b.dx
-        ball_dy = self.b.dy
-        ball_radius = self.settings.br
-        position_corrected = False
-
-        # Process each flipper
-        for f in self.flippers:
-            pivot_x, pivot_y = f.pivot
-            angle = f.angle
-            length = f.length
-            width = f.width  # Rectangle thickness
-            
-            
-            # Transform next ball position into flipper's local space
-            dx = next_x - pivot_x
-            dy = next_y - pivot_y
-            cos_a = math.cos(angle)
-            sin_a = math.sin(angle)
-            # Transform both current and next ball positions into flipper's local space
-            dx = ball_x - pivot_x
-            dy = ball_y - pivot_y
-            local_x1 = dx * cos_a + dy * sin_a
-            local_y1 = -dx * sin_a + dy * cos_a
-
-            dx_next = next_x - pivot_x
-            dy_next = next_y - pivot_y
-            local_x2 = dx_next * cos_a + dy_next * sin_a
-            local_y2 = -dx_next * sin_a + dy_next * cos_a
-
-            # Define rectangle bounds (ensure left < right)
-            rect_left = min(0, length)
-            rect_right = max(0, length)
-            rect_top = -width / 2
-            rect_bottom = width / 2
-
-            # Find closest point on rectangle to ball
-            closest_x = max(rect_left, min(local_x2, rect_right))
-            closest_y = max(rect_top, min(local_y2, rect_bottom))
-
-            # Distance from ball to closest point
-            dist_x = local_x2 - closest_x
-            dist_y = local_y2 - closest_y
-            distance = math.hypot(dist_x, dist_y)
-
-            # Check swept collision with flipper rectangle
-            hit, contact = self.swept_circle_vs_aabb(
-                (local_x1, local_y1),
-                (local_x2, local_y2),
-                ball_radius,
-                rect_left, rect_right,
-                rect_top, rect_bottom)
-            if hit:
-                # Move ball to contact point (in local space)
-                local_contact_x, local_contact_y = contact
-
-                # Transform contact point back to world space
-                world_dx = local_contact_x * cos_a - local_contact_y * sin_a
-                world_dy = local_contact_x * sin_a + local_contact_y * cos_a
-                ball_x = pivot_x + world_dx
-                ball_y = pivot_y + world_dy
-
-                # Compute local normal
-                cx = max(rect_left, min(local_contact_x, rect_right))
-                cy = max(rect_top, min(local_contact_y, rect_bottom))
-                nx_local = local_contact_x - cx
-                ny_local = local_contact_y - cy
-
-                # If normal is near zero (contact exactly on edge), determine which edge
-                if abs(nx_local) < 1e-6 and abs(ny_local) < 1e-6:
-                    eps = 1e-4
-                    if abs(local_contact_y - rect_top) < eps:
-                        nx_local, ny_local = 0, -1   # top edge (outward normal)
-                    elif abs(local_contact_y - rect_bottom) < eps:
-                        nx_local, ny_local = 0, 1    # bottom edge
-                    elif abs(local_contact_x - rect_left) < eps:
-                        nx_local, ny_local = -1, 0   # left edge
-                    elif abs(local_contact_x - rect_right) < eps:
-                        nx_local, ny_local = 1, 0    # right edge
-                    else:
-                        # Default to top edge
-                        nx_local, ny_local = 0, -1
-
-                length = math.hypot(nx_local, ny_local) or 1.0
-                nx_local /= length
-                ny_local /= length
-
-                # Transform normal to world space
-                nx = nx_local * cos_a - ny_local * sin_a
-                ny = nx_local * sin_a + ny_local * cos_a
-
-                # Push ball out of flipper (ensure it's outside)
-                push_dist = 2.0
-                ball_x += nx * push_dist
-                ball_y += ny * push_dist
-
-                # Compute flipper tip velocity (perpendicular to flipper direction)
-                # Angular velocity at tip = angular_vel * length
-                tip_speed = f.angular_vel * length
-                tip_vx = -math.sin(angle) * tip_speed
-                tip_vy = math.cos(angle) * tip_speed
-
-                # Reflect velocity
-                dot = ball_dx * nx + ball_dy * ny
-                if dot < 0:
-                    ball_dx -= 2 * dot * nx
-                    ball_dy -= 2 * dot * ny
-
-                    if f.active:
-                        # Velocity-based transfer only
-                        sign = 1 if f.is_left else -1   # assume is_left=True for left, False for right
-                        ball_dx += sign * tip_vx * (self.settings.phys_runs/2)
-                        ball_dy += sign * tip_vy * (self.settings.phys_runs/2)
-                    else:
-                        bounce = self.settings.deadf_bounce
-                        ball_dx *= bounce
-                        ball_dy *= bounce
-
-                    # Enforce minimum velocity
-                    min_vel = 0
-                    speed = math.hypot(ball_dx, ball_dy)
-                    if speed < min_vel:
-                        scale = min_vel / speed
-                        ball_dx *= scale
-                        ball_dy *= scale
-
-                    position_corrected = True
-                    print(f"[Swept CCD] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
-                break
-
-            # Fallback: static overlap resolution (e.g., flipper moved into ball)
-            if distance < ball_radius:
-                # Compute contact normal (local space)
-                if distance > 1e-6:
-                    normal_local = (dist_x / distance, dist_y / distance)
-                else:
-                    # Push away from flipper rectangle center
-                    rect_cx = (rect_left + rect_right) / 2
-                    rect_cy = (rect_top + rect_bottom) / 2
-                    fallback_dx = local_x2 - rect_cx
-                    fallback_dy = local_y2 - rect_cy
-                    fallback_length = math.hypot(fallback_dx, fallback_dy) or 1.0
-                    normal_local = (fallback_dx / fallback_length, fallback_dy / fallback_length)
-
-                # Transform normal to world space
-                nx = normal_local[0] * cos_a - normal_local[1] * sin_a
-                ny = normal_local[0] * sin_a + normal_local[1] * cos_a
-
-                # Compute flipper tip velocity
-                tip_speed = f.angular_vel * length
-                tip_vx = -math.sin(angle) * tip_speed
-                tip_vy = math.cos(angle) * tip_speed
-
-                # Push ball out of flipper
-                overlap = ball_radius - distance + 1.0
-                ball_x += nx * overlap
-                ball_y += ny * overlap
-
-                # Reflect velocity
-                dot_product = ball_dx * nx + ball_dy * ny
-                if dot_product < 0:
-                    ball_dx -= 2 * dot_product * nx
-                    ball_dy -= 2 * dot_product * ny
-
-                # Add flipper force if active (always, not just on collision)
-                if f.active:
-                    ball_dx += tip_vx * (self.settings.phys_runs/2)
-                    ball_dy += tip_vy * (self.settings.phys_runs/2)
-                else:
-                    bounce = self.settings.deadf_bounce
-                    ball_dx *= bounce 
-                    ball_dy *= bounce 
-
-                # Enforce minimum velocity (always, not just on dot_product < 0)
-                min_vel = 2.0
-                speed = math.hypot(ball_dx, ball_dy)
-                if speed < min_vel:
-                    scale = min_vel / speed
-                    ball_dx *= scale
-                    ball_dy *= scale
-
-                position_corrected = True
-                print(f"[Fallback] Flipper overlap at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
-
-
-
-
-        # --- Block collisions ---
-        for block in self.blocks:
-        
-            # Extract points for convenience
-            x1, y1 = block.x1, block.y1
-            x2, y2 = block.x2, block.y2
-            x3, y3 = block.x3, block.y3
-            x4, y4 = block.x4, block.y4
-            bounce = self.settings.block_bounce
-            ball_diag = ball_radius * 1.415  # diagonal radius approx sqrt(2)*radius
-
-            if block is self.blocks[0]:
-                # Left lower block slope line (x2,y2) to (x3,y3)
-                m = (y3 - y2) / (x3 - x2)
-                c = y2 - m * x2
-
-                line_y_at_ball = m * ball_x + c
-
-                # Check collision with slope
-                if ball_x <= x3 + ball_radius:
-                    if y2 - ball_radius <= ball_y <= y3 + ball_radius:
-                        if ball_y + ball_diag >= line_y_at_ball:
-                            ball_y = line_y_at_ball - ball_diag
-                            if ball_dx <= 0:
-                                ball_dy, ball_dx = -abs(ball_dx) * bounce, ball_dy * bounce
-                            else:
-                                ball_dy, ball_dx = -ball_dx * bounce, ball_dy * bounce
-                            position_corrected = True
-                            print(f"Block bounce, left slope. Velocity:{ball_dy, ball_dx} ")
-
-                # Left vertical wall (marked by x4)
-                if ball_x <= x4 + ball_radius:
-                    if ball_y >= y3:  # y3 is upper y of vertical wall
-                        if ball_dx < 0:
-                            ball_x = x4 + ball_radius
-                            ball_dx = -ball_dx * bounce
-                            position_corrected = True
-                        print(f"Block bounce, left wall. Velocity:{ball_dy, ball_dx}")
-
-            elif block is self.blocks[1]:
-                # Right lower block slope line (x2,y2) to (x3,y3)
-                m = (y3 - y2) / (x3 - x2)
-                c = y2 - m * x2
-
-                line_y_at_ball = m * ball_x + c
-
-                # Check collision with slope
-                if ball_x >= x3 - ball_radius:
-                    if y2 - ball_radius <= ball_y <= y3 + ball_radius:
-                        if ball_y + ball_diag >= line_y_at_ball:
-                            ball_y = line_y_at_ball - ball_diag
-                            if ball_dx >= 0:
-                                ball_dy, ball_dx = ball_dx * bounce, -ball_dy * bounce
-                            else:
-                                if ball_dy <= 0:
-                                    ball_dy, ball_dx = -ball_dx * bounce, ball_dy * bounce
-                                else:
-                                    ball_dy, ball_dx = -ball_dx * bounce, -ball_dy * bounce
-                            position_corrected = True
-                            print(f"Block bounce, right slope. Velocity:{ball_dy, ball_dx}")
-
-                # Right vertical wall (marked by x4)
-                if ball_x >= x4 - ball_radius:
-                    if ball_y >= y3:
-                        ball_x = self.settings.screen_width - ball_radius
-                        if ball_dx > 0:
-                            ball_x = x4 - ball_radius
-                            ball_dx = -ball_dx * bounce
-                            position_corrected = True
-                        position_corrected = True
-                        print(f"Block bounce, right wall. Velocity:{ball_dy, ball_dx}")
-
-        # --- Obstacle collisions ---
-        for obs in self.obs:
-            ox, oy = obs.x, obs.y
-            orad = self.settings.orad
-
-            dx = ball_x - ox
-            dy = ball_y - oy
-            dist = math.sqrt(dx*dx + dy*dy)
-
-            if dist < ball_radius + orad:
-                # Correct ball position outside the obstacle
-                epsilon = 0.5
-                ball_x = ox + (dx / dist) * (ball_radius + orad + epsilon)
-                ball_y = oy + (dy / dist) * (ball_radius + orad + epsilon)
-
-                # Bounce the ball off the obstacle surface
-                nx = dx / dist
-                ny = dy / dist
-                dot = ball_dx * nx + ball_dy * ny
-
-                if dot < -1e-3:
-                    ball_dx = ball_dx - 2 * dot * nx
-                    ball_dy = ball_dy - 2 * dot * ny
-
-                    ball_dx *= self.settings.obs_bounce
-                    ball_dy *= self.settings.obs_bounce
-
-                self.increment_score() 
-                if obs.c == self.settings.red:
-                    obs.c = self.settings.blu
-                elif obs.c == self.settings.blu:
-                    obs.c = self.settings.ylw
-                elif obs.c == self.settings.ylw:
-                    obs.c = self.settings.red
-                print(f"Hit obstacle at {ox},{oy}, bounce velocity ({ball_dx},{ball_dy})")
-
-        revised_next_y = ball_y + ball_dy
-        if abs(revised_next_y - ball_y) > 50: # Sanity check
-            print("!!! SUSPICIOUS movement detected!")
-            print(f"Before: y={self.b.y}, dy={self.b.dy}")
-            print(f"After: y={ball_y}, dy={ball_dy}")
-
-        # Update the ball's position and velocity once after all collisions
-        self.b.x = ball_x
-        self.b.y = ball_y
-        self.b.dx = ball_dx
-        self.b.dy = ball_dy
-
-        # print(f"FINAL ball pos: ({self.b.x}, {self.b.y}), velocity: ({self.b.dx}, {self.b.dy})")
-        
-
-        # Reset ball if out of bounds or collision condition met
-        if self.b.check_collision():
-            time.sleep(1.5)
-            self.b.reset()
-            self.score = 0  # Reset score on game over
-        
-        
-
-        # Move the ball according to current velocity
-        self.b.move() # Split off gravity and speed clamping, ideally
-
-
-
     def run_game(self):
         clock = pygame.time.Clock()
         while True:
@@ -586,7 +203,25 @@ class Pinball:
     def _update(self):
         if self.state == GameState.PLAYING:
             for _ in range(self.settings.phys_runs):
-                self.ball_physics()   # we'll refactor this later
+                events = self.physics_engine.update()
+                # Process events (score and color change)
+                for event in events:
+                    if event[0] == 'obstacle_hit':
+                        obs = event[1]
+                        self.increment_score()
+                        # Cycle obstacle color (original logic)
+                        if obs.c == self.settings.red:
+                            obs.c = self.settings.blu
+                        elif obs.c == self.settings.blu:
+                            obs.c = self.settings.ylw
+                        elif obs.c == self.settings.ylw:
+                            obs.c = self.settings.red
+
+            # Ball out-of-bounds check
+            if self.b.check_collision():
+                time.sleep(1.5)
+                self.b.reset()
+                self.score = 0
 
     def _draw(self):
         # Common drawing (background, score, game objects)
@@ -644,7 +279,10 @@ class Pinball:
             except:
                 pass
             
-            self.ball_physics()
+            events = self.physics_engine.update()
+            for event in events:
+                if event[0] == 'obstacle_hit':
+                    self.increment_score()
             
             if frame % 50 == 0:
                 print(f"Frame {frame}: ball at ({self.b.x:.1f}, {self.b.y:.1f}), velocity ({self.b.dx:.2f}, {self.b.dy:.2f}), score={self.score}")
@@ -654,7 +292,6 @@ class Pinball:
                 self.b.reset()
                 self.score = 0
             
-            self.b.move()
             frame += 1
         
         print(f"=== TEST COMPLETE - Final score: {self.score} ===")
