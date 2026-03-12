@@ -101,7 +101,7 @@ class Block:
         vt_y = ball_dy - vn * best_ny
 
         # Resting threshold to avoid micro‑bounces
-        RESTING_THRESHOLD = 0.1
+        RESTING_THRESHOLD = 0.9
         if vn < 0:  # moving into the surface
             if -vn < RESTING_THRESHOLD:
                 vn = 0  # become resting
