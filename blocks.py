@@ -4,7 +4,7 @@ import pygame
 import math
 
 class Block:
-    def __init__(self, vertices, color, bounce=0.8):
+    def __init__(self, vertices, color, restitution):
         """
         vertices: list of (x, y) tuples defining a convex polygon in order.
         color: RGB tuple or color constant.
@@ -12,7 +12,7 @@ class Block:
         """
         self.vertices = vertices
         self.c = color
-        self.bounce = bounce
+        self.restitution = restitution
 
         # Build edges from vertices (works for any polygon)
         self.edges = []
@@ -94,19 +94,20 @@ class Block:
         ball_x = best_cx + best_nx * ball_radius
         ball_y = best_cy + best_ny * ball_radius
 
-        # Velocity response
-        # Separate into normal and tangential components
+        # Unified restitution‑based response (block is static, so block velocity = 0)
+        restitution = self.restitution
         vn = ball_dx * best_nx + ball_dy * best_ny
         vt_x = ball_dx - vn * best_nx
         vt_y = ball_dy - vn * best_ny
 
+
         # Resting threshold to avoid micro‑bounces
-        RESTING_THRESHOLD = 0.9
+        RESTING_THRESHOLD = 0.75
         if vn < 0:  # moving into the surface
             if -vn < RESTING_THRESHOLD:
                 vn = 0  # become resting
             else:
-                vn = -vn * self.bounce   # normal bounce
+                vn = -vn * self.restitution   # normal bounce
         # If moving away, leave vn unchanged
 
         # No friction for now (keep tangential velocity as is)
