@@ -26,13 +26,13 @@ class Settings:
         self.collision_samples = 4  # Number of path samples
         self.collision_tolerance = 2  # Collision margin
 
-        # Obstacle properties
-        self.orad = 8/100 * self.screen_height   # obstacle radius
-        self.num_obs = 3
+        # Bumper properties
+        self.bump_rad = 8/100 * self.screen_height   # bumper radius
+        self.num_bumps = 3
         self.ocolors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0),
-                         (255, 130, 0), (130, 0, 255)]  # Colors for the obstacles
+                         (255, 130, 0), (130, 0, 255)]  # Colors for the bumpers
         self.pph = 10  # Points per hit
-        self.obs_bounce = 1.2
+        self.bump_bounce = 1.2
 
         # Colors
         self.wht = (255, 255, 255)
@@ -50,7 +50,7 @@ class Settings:
     
     def init_dynamic_settings(self):
         self.bs = 1   # ball speed
-        self.bsmax = 100 / self.phys_runs # max ball speed
+        self.bsmax = 80 / self.phys_runs # max ball speed
 
 
 
