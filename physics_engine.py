@@ -230,61 +230,16 @@ class PhysicsEngine:
                         ball_dx *= scale
                         ball_dy *= scale
 
-        # --- Block collisions (unchanged, just using local variables) ---
+        # --- Blocks collisions ---
         for block in self.blocks:
-            bounce = settings.block_bounce
-            ball_diag = ball_radius * 1.415
+            new_x, new_y, new_dx, new_dy, hit = block.collide(
+                ball_x, ball_y, ball_dx, ball_dy,
+                ball_radius
+            )
+            if hit:
+                ball_x, ball_y, ball_dx, ball_dy = new_x, new_y, new_dx, new_dy
+                break   # only handle one block collision per step (original behavior)
 
-            if block is self.blocks[0]:  # left block
-                x2, y2 = block.x2, block.y2
-                x3, y3 = block.x3, block.y3
-                x4 = block.x4
-
-                m = (y3 - y2) / (x3 - x2)
-                c = y2 - m * x2
-                line_y_at_ball = m * ball_x + c
-
-                if ball_x <= x3 + ball_radius:
-                    if y2 - ball_radius <= ball_y <= y3 + ball_radius:
-                        if ball_y + ball_diag >= line_y_at_ball:
-                            ball_y = line_y_at_ball - ball_diag
-                            if ball_dx <= 0:
-                                ball_dy, ball_dx = -abs(ball_dx) * bounce, ball_dy * bounce
-                            else:
-                                ball_dy, ball_dx = -ball_dx * bounce, ball_dy * bounce
-
-                if ball_x <= x4 + ball_radius:
-                    if ball_y >= y3:
-                        if ball_dx < 0:
-                            ball_x = x4 + ball_radius
-                            ball_dx = -ball_dx * bounce
-
-            elif block is self.blocks[1]:  # right block
-                x2, y2 = block.x2, block.y2
-                x3, y3 = block.x3, block.y3
-                x4 = block.x4
-
-                m = (y3 - y2) / (x3 - x2)
-                c = y2 - m * x2
-                line_y_at_ball = m * ball_x + c
-
-                if ball_x >= x3 - ball_radius:
-                    if y2 - ball_radius <= ball_y <= y3 + ball_radius:
-                        if ball_y + ball_diag >= line_y_at_ball:
-                            ball_y = line_y_at_ball - ball_diag
-                            if ball_dx >= 0:
-                                ball_dy, ball_dx = ball_dx * bounce, -ball_dy * bounce
-                            else:
-                                if ball_dy <= 0:
-                                    ball_dy, ball_dx = -ball_dx * bounce, ball_dy * bounce
-                                else:
-                                    ball_dy, ball_dx = -ball_dx * bounce, -ball_dy * bounce
-
-                if ball_x >= x4 - ball_radius:
-                    if ball_y >= y3:
-                        if ball_dx > 0:
-                            ball_x = x4 - ball_radius
-                            ball_dx = -ball_dx * bounce
 
         # --- Bumpers collisions ---
         for bumper in self.bumpers:
