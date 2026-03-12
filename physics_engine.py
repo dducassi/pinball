@@ -170,11 +170,11 @@ class PhysicsEngine:
                         ball_dy *= bounce
 
                     # Minimum velocity
-                    speed = math.hypot(ball_dx, ball_dy)
-                    if speed < 2.0:
-                        scale = 2.0 / speed
-                        ball_dx *= scale
-                        ball_dy *= scale
+                    # speed = math.hypot(ball_dx, ball_dy)
+                    # if speed < 2.0:
+                        #scale = 2.0 / speed
+                        #ball_dx *= scale
+                        #ball_dy *= scale
 
                 # Break after handling a hit
                 print(f"[Swept CCD] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
@@ -225,10 +225,15 @@ class PhysicsEngine:
                         ball_dy *= bounce
 
                     speed = math.hypot(ball_dx, ball_dy)
-                    if speed < 2.0:
-                        scale = 2.0 / speed
-                        ball_dx *= scale
-                        ball_dy *= scale
+
+                    # Minimum velocity
+                    # speed = math.hypot(ball_dx, ball_dy)
+                    # if speed < 2.0:
+                        #scale = 2.0 / speed
+                        #ball_dx *= scale
+                        #ball_dy *= scale
+
+                   
 
         # --- Blocks collisions ---
         for block in self.blocks:
