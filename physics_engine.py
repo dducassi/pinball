@@ -58,12 +58,11 @@ class PhysicsEngine:
     def update(self):
         """Run one physics step and send notifications."""
 
-
-        # Update flipper angles (original first lines of ball_physics)
+        # Update flipper angles
         for f in self.flippers:
             f.update()
 
-        # Local copies for readability (same as original)
+        # Local copies for readability
         ball = self.ball
         settings = self.settings
         ball_radius = settings.br
@@ -78,7 +77,7 @@ class PhysicsEngine:
         ball_dy = ball.dy
 
         RESTING_THRESHOLD = 0.75
-        # --- Flipper collisions (exact copy from original ball_physics) ---
+        # --- Flipper collisions ---
         for f in self.flippers:
             pivot_x, pivot_y = f.pivot
             angle = f.angle
@@ -157,7 +156,7 @@ class PhysicsEngine:
                 contact_vx = -math.sin(angle) * contact_speed
                 contact_vy = math.cos(angle) * contact_speed
 
-               # --- Unified restitution‑based reflection ---
+               # Unified restitution‑based reflection
                 restitution = settings.restitution
                 v_rel_x = ball_dx - contact_vx
                 v_rel_y = ball_dy - contact_vy
@@ -184,8 +183,6 @@ class PhysicsEngine:
                 break
 
          
-
-                   
 
         # --- Blocks collisions ---
         for block in self.blocks:
