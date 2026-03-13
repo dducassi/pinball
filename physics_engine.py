@@ -76,7 +76,7 @@ class PhysicsEngine:
         ball_dx = ball.dx
         ball_dy = ball.dy
 
-        RESTING_THRESHOLD = 0.75
+        RESTING_THRESHOLD = 0.7
         # --- Flipper collisions ---
         for f in self.flippers:
             pivot_x, pivot_y = f.pivot
