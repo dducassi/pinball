@@ -102,7 +102,7 @@ class Block:
 
 
         # Resting threshold to avoid micro‑bounces
-        RESTING_THRESHOLD = 0.75
+        RESTING_THRESHOLD = 0.7
         if vn < 0:  # moving into the surface
             if -vn < RESTING_THRESHOLD:
                 vn = 0  # become resting
