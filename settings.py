@@ -10,7 +10,7 @@ class Settings:
         
         # Ball properties
         self.br = 10  # ball radius
-        self.phys_runs = 20
+        self.phys_runs = 10
 
         # Margins for UI and plunger lane
         self.top_margin = 100          # height of top message area
@@ -66,7 +66,7 @@ class Settings:
     
     def init_dynamic_settings(self):
         self.bs = 1   # ball speed
-        self.bsmax = 42 / self.phys_runs # max ball speed
+        self.bsmax = 25 / self.phys_runs # max ball speed
 
 
 
