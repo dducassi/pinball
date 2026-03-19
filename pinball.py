@@ -58,6 +58,10 @@ class Pinball:
 
         # Start in Menu mode
         self.state = GameState.MENU
+
+        # Store playfield offset for drawing
+        self.playfield_x = 0
+        self.playfield_y = self.settings.top_margin
         
         if test_mode:
             self.screen = pygame.display.set_mode((self.settings.screen_width, 
@@ -74,9 +78,18 @@ class Pinball:
 
         # Initialize the ball and flippers
         self.b = Ball(self)
-        self.fl = Flipper(2/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, self.settings.f_length, 0.6, True)
-        self.fr = Flipper(5/7 * self.settings.screen_width, self.settings.screen_height - 9/140 * self.settings.screen_height, self.settings.f_length, -0.6, False)
-    
+          
+        self.fl = Flipper(
+            2/7 * self.settings.playfield_width,
+            self.playfield_y + self.settings.playfield_height - 19/140 * self.settings.playfield_height,
+            self.settings.f_length, 0.6, True
+        )
+        self.fr = Flipper(
+            5/7 * self.settings.playfield_width,
+            self.playfield_y + self.settings.playfield_height - 19/140 * self.settings.playfield_height,
+            self.settings.f_length, -0.6, False
+        )
+
         
         # Generate bumpers and block elements
         self.bumpers = []
@@ -87,6 +100,16 @@ class Pinball:
         self.blocks = self.table_builder.generate_blocks()
         self.physics_engine = PhysicsEngine(self.b, self.flippers, self.bumpers, self.blocks, self.settings, self.notification_center)
 
+       
+        # Set plunger lane
+        self.lane_center = self.table_builder.get_lane_center()
+        self.lane_bottom = self.settings.screen_height
+        
+        # Set ball's lane reference
+        self.b.lane_x_center = self.lane_center
+        self.b.lane_bottom = self.lane_bottom
+        
+        
 
     def draw_bumpers(self):
         for bumper in self.bumpers:
@@ -95,6 +118,18 @@ class Pinball:
     def draw_blocks(self):
         for block in self.blocks:
             pygame.draw.polygon(self.screen, block.c, block.vertices)
+            # Draw playfield boundaries (visual walls)
+            wall_color = (100, 100, 100)  # gray
+            # Left wall
+            pygame.draw.rect(self.screen, wall_color,
+                            (0, self.settings.top_margin,
+                            self.settings.lane_wall_thickness,
+                            self.settings.screen_height - self.settings.top_margin))
+            # Top wall
+            pygame.draw.rect(self.screen, wall_color,
+                            (0, self.settings.top_margin,
+                            self.settings.playfield_width,
+                            self.settings.lane_wall_thickness))
 
     def run_game(self):
         clock = pygame.time.Clock()
@@ -163,7 +198,7 @@ class Pinball:
                 self.physics_engine.update()
 
             # Ball out-of-bounds check
-            if self.b.check_collision():
+            if self.b.lost:
                 time.sleep(1.5)
                 self.b.reset()
                 self.b.trapped = False
@@ -171,10 +206,10 @@ class Pinball:
 
     def _draw(self):
         # Common drawing (background, score, game objects)
-        if self.bg:
-            self.screen.blit(self.bg, (0, 0))
-        else:
-            self.screen.fill((0, 0, 0))
+        self.screen.fill((0, 0, 0))
+        #if self.bg:
+            #self.screen.blit(self.bg, (0, self.settings.top_margin))
+        
 
         # Draw game elements
         self.fl.draw(self.screen)
@@ -243,7 +278,6 @@ class Pinball:
         input("Press Enter to exit...")
 
 if __name__ == '__main__':
-    import sys
     try:
         print("Starting pinball...", flush=True)
         parser = argparse.ArgumentParser(description='Wizard Pinball')
