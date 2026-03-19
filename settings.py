@@ -10,7 +10,7 @@ class Settings:
         
         # Ball properties
         self.br = 10  # ball radius
-        self.phys_runs = 10
+        self.phys_runs = 20
 
         # Margins for UI and plunger lane
         self.top_margin = 100          # height of top message area
@@ -31,12 +31,12 @@ class Settings:
 
 
         # Block properties
-        self.block_bounce = 0.8
+        self.block_bounce = 0.75
         
 
         # Flipper properties
-        self.f_length = 4/21 * self.playfield_width
-        self.restitution = 0.8
+        self.f_length = 31/168 * self.playfield_width + 0.5
+        self.restitution = 0.75
 
 
         # Bumper properties
@@ -66,7 +66,7 @@ class Settings:
     
     def init_dynamic_settings(self):
         self.bs = 1   # ball speed
-        self.bsmax = 80 / self.phys_runs # max ball speed
+        self.bsmax = 42 / self.phys_runs # max ball speed
 
 
 
