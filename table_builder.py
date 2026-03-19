@@ -17,7 +17,7 @@ class TableBuilder:
         bumpers = []
         x = self.playfield_width / 2 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin
-        bump_rad = 40
+        bump_rad = 45
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
         x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
