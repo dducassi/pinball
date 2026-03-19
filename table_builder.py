@@ -17,15 +17,28 @@ class TableBuilder:
         bumpers = []
         x = self.playfield_width / 2 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin
-        bumpers.append(Bumper(x, y, self.settings.blu))
+        bump_rad = 40
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
+
+        x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
+        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
+        bump_rad = 18
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
+
+        x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
+        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
+        bump_rad = 18
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
+
+
         return bumpers
     
     def generate_top_guide(self):
         """Return a triangular guide at the top of the plunger lane to deflect ball left."""
         wall_thick = self.settings.lane_wall_thickness
-        lane_left = self.playfield_width + wall_thick          # interior left edge
+        lane_left = self.playfield_width - wall_thick          # interior left edge
         lane_right = self.screen_width - wall_thick            # interior right edge
-        guide_height = 30                                      # how far down the guide extends
+        guide_height = 40                                      # how far down the guide extends
         vertices = [
             (lane_left, self.top_margin),                      # top left
             (lane_right, self.top_margin),                     # top right
@@ -36,12 +49,12 @@ class TableBuilder:
     def generate_one_way_wall(self):
         """Create a thin vertical wall just left of the lane exit to prevent re‑entry."""
         wall_thick = self.settings.lane_wall_thickness
-        wall_x = self.playfield_width + wall_thick - 2
-        thickness = 2
+        wall_x = self.playfield_width + 1
+        thickness = 3
         vertices = [
             (wall_x, self.top_margin),
-            (wall_x, self.top_margin + self.guide_height * 1.5),
-            (wall_x - thickness, self.top_margin + self.guide_height * 1.5),
+            (wall_x, self.top_margin + self.guide_height * 2),
+            (wall_x - thickness, self.top_margin + self.guide_height * 2),
             (wall_x - thickness, self.top_margin)
         ]
         return OneWayBlock(vertices, (100,100,100), restitution=self.settings.restitution, direction='left')
@@ -67,26 +80,26 @@ class TableBuilder:
         blocks.append(Block(right_vertices, self.settings.gry, restitution=self.settings.restitution))
 
         # Funnel blocks above left and right main blocks
-        funnel_height = 40
+        funnel_height = 50
         # Left funnel (same slope as left block)
-        left_top_y = self.top_margin + self.playfield_height - 4/14 * self.playfield_height
-        left_bottom_y = self.top_margin + self.playfield_height - 3/14 * self.playfield_height
+        left_top_y = self.top_margin + self.playfield_height - 9/28 * self.playfield_height
+        left_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         left_funnel_vertices = [
             (3 * self.settings.br, left_top_y - funnel_height),
             (3 * self.settings.br, left_top_y),
-            (2/7 * self.playfield_width - self.settings.br * 1.5, left_bottom_y),
-            (2/7 * self.playfield_width - self.settings.br * 1.5, left_bottom_y - funnel_height)
+            (2/7 * self.playfield_width - self.settings.br * 1.1, left_bottom_y),
+            (2/7 * self.playfield_width - self.settings.br * 1.7, left_bottom_y - funnel_height)
         ]
         blocks.append(Block(left_funnel_vertices, self.settings.gry, restitution=self.settings.restitution))
 
         # Right funnel (same slope as right block)
-        right_top_y = self.top_margin + self.playfield_height - 4/14 * self.playfield_height
-        right_bottom_y = self.top_margin + self.playfield_height - 3/14 * self.playfield_height
+        right_top_y = self.top_margin + self.playfield_height - 9/28 * self.playfield_height
+        right_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         right_funnel_vertices = [
-            (self.playfield_width - 3 * self.settings.br + 7 , right_top_y - funnel_height),
-            (self.playfield_width - 3 * self.settings.br + 7, right_top_y),
-            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.5, right_bottom_y),
-            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.5, right_bottom_y - funnel_height)
+            (self.playfield_width - 3 * self.settings.br, right_top_y - funnel_height),
+            (self.playfield_width - 3 * self.settings.br, right_top_y),
+            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.1, right_bottom_y),
+            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.7, right_bottom_y - funnel_height)
         ]
         blocks.append(Block(right_funnel_vertices, self.settings.gry, restitution=self.settings.restitution))
 
@@ -116,9 +129,9 @@ class TableBuilder:
 
         # Left lane wall (shortened to allow exit)
         left_wall_vertices = [
-            (lane_left, lane_bottom),
-            (lane_left, lane_top + self.guide_height * 1.5),
-            (lane_left + wall_thick, lane_top + self.guide_height * 1.5),
+            (lane_left - wall_thick, lane_bottom),
+            (lane_left - wall_thick, lane_top + self.guide_height * 2),
+            (lane_left + wall_thick, lane_top + self.guide_height * 2),
             (lane_left + wall_thick, lane_bottom)
         ]
         blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution))
