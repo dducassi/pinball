@@ -7,7 +7,14 @@ class ScoreManager:
         self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
 
     def on_bumper_hit(self, bumper):
-        self.score += self.settings.pph
+        # 100 points for hitting Wizard's Orb:
+        if bumper.radius > 30:
+            self.score += self.settings.pph * 10
+
+        # 10 points for lesser hit:
+        else:
+            self.score += self.settings.pph
+
         # Cycle bumper color
         if bumper.c == self.settings.red:
             bumper.c = self.settings.blu
