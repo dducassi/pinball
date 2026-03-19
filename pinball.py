@@ -255,11 +255,18 @@ class Pinball:
             self._draw_paused_text()
 
         # Score
-        f = pygame.font.Font(None, 36)
+        f = pygame.font.Font(None, 34)
         score_text = f.render(f'Score: {self.score_manager.score}', True, self.settings.wht)
-        self.screen.blit(score_text, (20, 20))
+        self.screen.blit(score_text, (12, 60))
 
+
+         # Title
+        title_font = pygame.font.Font(None, 24)
+        title_text = title_font.render('WIZARD PINBALL', True, self.settings.wht)
+        title_rect = title_text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 4))
+        self.screen.blit(title_text, title_rect)
         pygame.display.flip()
+
 
     def _draw_menu_text(self):
         f = pygame.font.Font(None, 36)
