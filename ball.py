@@ -1,99 +1,71 @@
 import pygame
 import sys
 import os
+import random
+import math
+from settings import Settings
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if getattr(sys, 'frozen', False):
-    # Running as EXE - use temporary bundle directory
     base_dir = sys._MEIPASS
 else:
-    # Running as script - use normal script directory
     base_dir = script_dir
 
-from settings import Settings
-import random
 
-
-class Ball():
+class Ball:
     def __init__(self, bb_game):
-        # Give ball screen, settings, start ball
         self.screen = bb_game.screen
         self.settings = bb_game.settings
         self.screen_rect = bb_game.screen.get_rect()
-        self.reset()
+        self.lane_x_center = None
+        self.lane_bottom = None
+        self.launched = False
         self.trapped = False
-    
-    def reset(self):
+        self.lost = False
+        self.reset()
 
-        # Start in the center of the screen
-        self.x = self.settings.screen_width // 2
-        self.y = self.settings.br
-        # Random initial direction up
-        self.dx = self.settings.bs * random.choice([-2, -1, 1, 2])
-        self.dy = self.settings.bs * 1.1
+    def reset(self):
+        if self.lane_x_center is not None and self.lane_bottom is not None:
+            self.x = self.lane_x_center
+            self.y = self.lane_bottom - self.settings.br - 2
+        else:
+            self.x = self.settings.screen_width // 2
+            self.y = self.settings.br
+        self.dx = 0
+        self.dy = 0
+        self.launched = False
+        self.trapped = False
+        self.lost = False
 
     def move(self):
-
-        # Don't move if ball is trapped
-        if self.trapped:
+        if self.trapped or not self.launched:
             return
 
-        # Account for friction causing loss of inertia
+        # Friction (from original)
         self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
         if self.dx > 0:
             self.dx -= (0.0008 * abs(self.dy)) / self.settings.phys_runs
         elif self.dx < 0:
             self.dx += (0.0008 * abs(self.dy)) / self.settings.phys_runs
-            
-        
-        # Always fall
+
+        # Gravity
         if self.y <= self.settings.screen_height:
             self.dy += 0.09 / self.settings.phys_runs
 
-        # Cap the speed vector magnitude
-        speed = (self.dx ** 2 + self.dy ** 2) ** 0.5
+        # Speed cap
+        speed = math.hypot(self.dx, self.dy)
         if speed > self.settings.bsmax:
             scale = self.settings.bsmax / speed
             self.dx *= scale
             self.dy *= scale
 
-
-
-        
         max_dy = 40
         if abs(self.dy) > max_dy:
             print(f"!!! Abnormal dy detected: {self.dy}.")
-        
-        self.x += self.dx 
-        self.y += self.dy 
 
-        
+        self.x += self.dx
+        self.y += self.dy
 
-
-
-    def check_collision(self):
-        # Bounce off the left and right walls
-        if self.x - self.settings.br <= 0:
-            self.x = 0 + self.settings.br
-
-            self.dx = abs(0.8 * self.dx)
-            self.dy = self.dy * 0.8
-        elif self.x >= self.settings.screen_width - self.settings.br:
-            self.x = self.settings.screen_width - self.settings.br
-
-            self.dx = -(abs(0.8 * self.dx))
-            self.dy = self.dy * 0.8
-        
-            
-        # Bounce off the top wall or signal game over if it hits the bottom
-        if self.y <= self.settings.br:
-            self.y = self.settings.br
-            
-            self.dy = abs(0.8 * self.dy)
-            self.dx = self.dx * 0.8
-        elif self.y >= self.settings.screen_height * 1.2:
-            return True
-        return False
-    
     def draw_ball(self):
-        pygame.draw.circle(self.screen, self.settings.slv, 
-            (int(self.x), int(self.y)), self.settings.br)
+        pygame.draw.circle(self.screen, self.settings.slv,
+                           (int(self.x), int(self.y)), self.settings.br)
