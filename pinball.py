@@ -254,17 +254,25 @@ class Pinball:
         elif self.state == GameState.PAUSED:
             self._draw_paused_text()
 
-        # Score
-        f = pygame.font.Font(None, 34)
+        # Try to load the custom font
+        try:
+            font_path = os.path.join(base_dir, 'PressStart2P-Regular.ttf')
+            title_font = pygame.font.Font(font_path, 12 )  # Adjust size as needed
+        except:
+            # Fallback to default font if custom font not found
+            title_font = pygame.font.Font(None, 36)
+
+        # Score (use a different font or the same – here we keep default)
+        f = pygame.font.Font(font_path, 16)
         score_text = f.render(f'Score: {self.score_manager.score}', True, self.settings.wht)
         self.screen.blit(score_text, (12, 60))
 
-
-         # Title
-        title_font = pygame.font.Font(None, 24)
+        # Title – use the loaded font
         title_text = title_font.render('WIZARD PINBALL', True, self.settings.wht)
         title_rect = title_text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 4))
         self.screen.blit(title_text, title_rect)
+
+
         pygame.display.flip()
 
 
