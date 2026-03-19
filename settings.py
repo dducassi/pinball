@@ -7,9 +7,22 @@
 class Settings:
 
     def __init__(self):
+
+        # Margins for UI and plunger lane
+        self.top_margin = 100          # height of top message area
+        self.right_margin = 60          # width of right plunger lane
+
         # Screen dimensions
-        self.screen_width = 350
-        self.screen_height = 700
+        self.screen_width = 275 + self.right_margin
+        self.screen_height = 550 + self.top_margin
+
+        
+        
+
+        # Playfield dimensions (where game elements are placed)
+        self.playfield_width = self.screen_width - self.right_margin
+        self.playfield_height = self.screen_height - self.top_margin
+
 
         # Ball properties
         self.br = 10  # ball radius
@@ -20,17 +33,20 @@ class Settings:
         
 
         # Flipper properties
-        self.f_length = 4/21 * self.screen_width
+        self.f_length = 4/21 * self.playfield_width
         self.restitution = 0.8
 
 
         # Bumper properties
-        self.bump_rad = 8/100 * self.screen_height   # bumper radius
+        self.bump_rad = 8/100 * self.playfield_height   # bumper radius
         self.num_bumps = 3
         self.ocolors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0),
                          (255, 130, 0), (130, 0, 255)]  # Colors for the bumpers
         self.pph = 10  # Points per hit
         self.bump_bounce = 1.2
+
+        # Lane properties:
+        self.lane_wall_thickness = 5
 
         # Colors
         self.wht = (255, 255, 255)
