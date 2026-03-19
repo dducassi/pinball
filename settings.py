@@ -7,10 +7,14 @@
 class Settings:
 
     def __init__(self):
+        
+        # Ball properties
+        self.br = 10  # ball radius
+        self.phys_runs = 10
 
         # Margins for UI and plunger lane
         self.top_margin = 100          # height of top message area
-        self.right_margin = 60          # width of right plunger lane
+        self.right_margin = 15 + self.br * 2          # width of right plunger lane
 
         # Screen dimensions
         self.screen_width = 275 + self.right_margin
@@ -24,9 +28,7 @@ class Settings:
         self.playfield_height = self.screen_height - self.top_margin
 
 
-        # Ball properties
-        self.br = 10  # ball radius
-        self.phys_runs = 10
+
 
         # Block properties
         self.block_bounce = 0.8
@@ -46,7 +48,7 @@ class Settings:
         self.bump_bounce = 1.2
 
         # Lane properties:
-        self.lane_wall_thickness = 5
+        self.lane_wall_thickness = 7
 
         # Colors
         self.wht = (255, 255, 255)
