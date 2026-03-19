@@ -105,10 +105,24 @@ class Pinball:
             pull_speed=5,
             max_launch_speed=15
         )
+        # Set plunger lane using table builder
+        self.lane_center = self.table_builder.get_lane_center()
+        self.lane_bottom = self.table_builder.get_lane_bottom()
+        self.b.lane_x_center = self.lane_center
+        self.b.lane_bottom = self.lane_bottom
+
+        # Create plunger at correct height
+        self.plunger = Plunger(
+            self.lane_center,
+            self.table_builder.get_plunger_base_y(),
+            max_pull=100,
+            pull_speed=5,
+            max_launch_speed=15
+        )
 
     def draw_bumpers(self):
         for bumper in self.bumpers:
-            pygame.draw.circle(self.screen, bumper.c, (bumper.x, bumper.y), self.settings.bump_rad)
+            pygame.draw.circle(self.screen, bumper.c, (bumper.x, bumper.y), bumper.radius)
 
     def draw_blocks(self):
         for block in self.blocks:
@@ -121,12 +135,11 @@ class Pinball:
                          (0, self.settings.top_margin,
                           self.settings.lane_wall_thickness,
                           self.settings.screen_height - self.settings.top_margin))
-        # Top wall
+        
         pygame.draw.rect(self.screen, wall_color,
                          (0, self.settings.top_margin,
-                          self.settings.playfield_width,
+                          self.settings.screen_width,
                           self.settings.lane_wall_thickness))
-
     def run_game(self):
         clock = pygame.time.Clock()
         while True:
@@ -199,10 +212,17 @@ class Pinball:
         if self.state == GameState.PLAYING:
             # Plunger update while pulling
             if not self.b.launched and self.plunger.pulling:
-                self.plunger.update(1)   # dt=1 per frame (30 fps)
+                self.plunger.update(1)
 
             for _ in range(self.settings.phys_runs):
                 self.physics_engine.update()
+
+            # Check if ball is resting on stopper (allows relaunch)
+            if (self.b.launched and 
+                abs(self.b.x - self.lane_center) < 5 and
+                abs(self.b.y - (self.lane_bottom - self.settings.br)) < 5 and
+                math.hypot(self.b.dx, self.b.dy) < 0.5):
+                self.b.launched = False
 
             if self.b.lost:
                 time.sleep(1.5)
@@ -307,4 +327,8 @@ if __name__ == '__main__':
         print(f"ERROR: {e}", flush=True)
         import traceback
         traceback.print_exc()
-        input("Press Enter to exit...")
+        input("Press Enter to exit...") 
+        if input == "":
+            sys.exit()
+        else:
+            sys.exit()
