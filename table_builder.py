@@ -66,6 +66,29 @@ class TableBuilder:
         ]
         blocks.append(Block(right_vertices, self.settings.gry, restitution=self.settings.restitution))
 
+        # Funnel blocks above left and right main blocks
+        funnel_height = 40
+        # Left funnel (same slope as left block)
+        left_top_y = self.top_margin + self.playfield_height - 4/14 * self.playfield_height
+        left_bottom_y = self.top_margin + self.playfield_height - 3/14 * self.playfield_height
+        left_funnel_vertices = [
+            (3 * self.settings.br, left_top_y - funnel_height),
+            (3 * self.settings.br, left_top_y),
+            (2/7 * self.playfield_width - self.settings.br * 1.5, left_bottom_y),
+            (2/7 * self.playfield_width - self.settings.br * 1.5, left_bottom_y - funnel_height)
+        ]
+        blocks.append(Block(left_funnel_vertices, self.settings.gry, restitution=self.settings.restitution))
+
+        # Right funnel (same slope as right block)
+        right_top_y = self.top_margin + self.playfield_height - 4/14 * self.playfield_height
+        right_bottom_y = self.top_margin + self.playfield_height - 3/14 * self.playfield_height
+        right_funnel_vertices = [
+            (self.playfield_width - 3 * self.settings.br + 7 , right_top_y - funnel_height),
+            (self.playfield_width - 3 * self.settings.br + 7, right_top_y),
+            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.5, right_bottom_y),
+            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.5, right_bottom_y - funnel_height)
+        ]
+        blocks.append(Block(right_funnel_vertices, self.settings.gry, restitution=self.settings.restitution))
 
         # Bottom stopper block
         stopper_height = 10
@@ -108,6 +131,8 @@ class TableBuilder:
             (lane_right, lane_bottom)
         ]
         blocks.append(Block(right_wall_vertices, (100,100,100), restitution=self.settings.restitution))
+
+
 
         return blocks
 
