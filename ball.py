@@ -27,7 +27,7 @@ class Ball:
     def reset(self):
         if self.lane_x_center is not None and self.lane_bottom is not None:
             self.x = self.lane_x_center
-            self.y = self.lane_bottom - self.settings.br - 2
+            self.y = self.lane_bottom - self.settings.br
         else:
             self.x = self.settings.screen_width // 2
             self.y = self.settings.br
@@ -44,13 +44,13 @@ class Ball:
         # Friction (from original)
         self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
         if self.dx > 0:
-            self.dx -= (0.0008 * abs(self.dy)) / self.settings.phys_runs
+            self.dx -= (0.00045 * abs(self.dy)) / self.settings.phys_runs
         elif self.dx < 0:
-            self.dx += (0.0008 * abs(self.dy)) / self.settings.phys_runs
+            self.dx += (0.00045 * abs(self.dy)) / self.settings.phys_runs
 
         # Gravity
         if self.y <= self.settings.screen_height:
-            self.dy += 0.09 / self.settings.phys_runs
+            self.dy += 0.05 / self.settings.phys_runs
 
         # Speed cap
         speed = math.hypot(self.dx, self.dy)
