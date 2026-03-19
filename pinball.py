@@ -156,7 +156,7 @@ class Pinball:
             self._handle_events()
             self._update()
             self._draw()
-            clock.tick(30)
+            clock.tick(60)
 
     def _handle_events(self):
         for event in pygame.event.get():
