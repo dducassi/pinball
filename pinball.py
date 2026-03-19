@@ -120,6 +120,16 @@ class Pinball:
             max_launch_speed=15
         )
 
+        # Set up background
+        if not test_mode:
+            self.bg = pygame.image.load(os.path.join(base_dir, 'wizard.png')).convert()
+            # Scale to playfield size
+            self.bg = pygame.transform.scale(self.bg,
+                                             (self.settings.playfield_width,
+                                              self.settings.playfield_height))
+        else:
+            self.bg = None
+
     def draw_bumpers(self):
         for bumper in self.bumpers:
             pygame.draw.circle(self.screen, bumper.c, (bumper.x, bumper.y), bumper.radius)
@@ -232,9 +242,10 @@ class Pinball:
 
     def _draw(self):
         self.screen.fill((0, 0, 0))
-        # Background (optional)
-        # if self.bg:
-        #     self.screen.blit(self.bg, (0, self.settings.top_margin))
+        
+        # Draw playfield background if available
+        if self.bg:
+            self.screen.blit(self.bg, (self.settings.lane_wall_thickness, self.playfield_y))
 
         # Game elements
         self.fl.draw(self.screen)
@@ -272,6 +283,7 @@ class Pinball:
         title_rect = title_text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 4))
         self.screen.blit(title_text, title_rect)
 
+        
 
         pygame.display.flip()
 
