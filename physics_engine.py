@@ -224,11 +224,34 @@ class PhysicsEngine:
                 # Record notifications for scoring and color change
                 self.notification_center.post_notification('bumper_hit', bumper)
 
+        # --- Wall collisions (playfield boundaries) ---
+        # Left wall
+        if ball_x - ball_radius < 0:
+            ball_x = ball_radius
+            if ball_dx < 0:
+                ball_dx = -ball_dx * settings.restitution
+        # Top wall (including top margin)
+        if ball_y - ball_radius < settings.top_margin:
+            ball_y = settings.top_margin + ball_radius
+            if ball_dy < 0:
+                ball_dy = -ball_dy * settings.restitution
+
+        # Bottom out-of-bounds
+        if ball_y + ball_radius > settings.screen_height * 1.5:
+            self.ball.lost = True   # ball lost
+
         # Apply final ball state
         ball.x = ball_x
         ball.y = ball_y
         ball.dx = ball_dx
         ball.dy = ball_dy
+      
+        # Apply final ball state
+        ball.x = ball_x
+        ball.y = ball_y
+        ball.dx = ball_dx
+        ball.dy = ball_dy
+
 
         # --- Trapped detection (ball between flipper and block) ---
         TRAP_SPEED_THRESH = 0.2
@@ -279,6 +302,8 @@ class PhysicsEngine:
                     ball.trapped = True
                     ball.dx = 0
                     ball.dy = 0
+
+        
 
         # Original ball.move() call (gravity, friction, walls)
         ball.move()
