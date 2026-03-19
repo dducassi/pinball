@@ -11,40 +11,32 @@ from ball import Ball
 from bumpers import Bumper
 from blocks import Block
 from flipper import Flipper
+from plunger import Plunger
 from gamestate import GameState
 from physics_engine import PhysicsEngine
 from table_builder import TableBuilder
 from notification_center import NotificationCenter
 from score_manager import ScoreManager
 
-
 import os
 
 try:
     print("Script starting...", flush=True)
-    # rest of code
 except Exception as e:
     print(f"ERROR: {e}")
     import traceback
     traceback.print_exc()
 
-
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if getattr(sys, 'frozen', False):
-    # Running as EXE - use temporary bundle directory
     base_dir = sys._MEIPASS
 else:
-    # Running as script - use normal script directory
     base_dir = script_dir
 
 
-
 class Pinball:
-    
-    
 
     def __init__(self, test_mode=False):
-        # Initialize Pygame and settings
         self.test_mode = test_mode
         if test_mode:
             os.environ['SDL_VIDEODRIVER'] = 'dummy'
@@ -53,32 +45,27 @@ class Pinball:
 
         self.settings = Settings()
 
-        # Set up the game window
         self.bg = None
-
-        # Start in Menu mode
         self.state = GameState.MENU
-
-        # Store playfield offset for drawing
         self.playfield_x = 0
         self.playfield_y = self.settings.top_margin
-        
+
         if test_mode:
-            self.screen = pygame.display.set_mode((self.settings.screen_width, 
-                self.settings.screen_height))
+            self.screen = pygame.display.set_mode((self.settings.screen_width,
+                                                   self.settings.screen_height))
         else:
-            self.screen = pygame.display.set_mode((self.settings.screen_width, 
-                self.settings.screen_height), pygame.RESIZABLE)
-            self.bg = pygame.image.load(os.path.join(
-                                            base_dir, 'wizard.png'))
+            self.screen = pygame.display.set_mode((self.settings.screen_width,
+                                                   self.settings.screen_height), pygame.RESIZABLE)
+            self.bg = pygame.image.load(os.path.join(base_dir, 'wizard.png'))
         pygame.display.set_caption('Wizard Pinball')
-        
+
         self.notification_center = NotificationCenter()
         self.score_manager = ScoreManager(self.notification_center, self.settings)
 
-        # Initialize the ball and flippers
+        # Ball
         self.b = Ball(self)
-          
+
+        # Flippers (positioned within playfield)
         self.fl = Flipper(
             2/7 * self.settings.playfield_width,
             self.playfield_y + self.settings.playfield_height - 19/140 * self.settings.playfield_height,
@@ -90,46 +77,55 @@ class Pinball:
             self.settings.f_length, -0.6, False
         )
 
-        
-        # Generate bumpers and block elements
-        self.bumpers = []
-        self.blocks = [] 
         self.flippers = [self.fl, self.fr]
+
+        # Table elements
         self.table_builder = TableBuilder(self.settings)
         self.bumpers = self.table_builder.generate_bumpers()
         self.blocks = self.table_builder.generate_blocks()
-        self.physics_engine = PhysicsEngine(self.b, self.flippers, self.bumpers, self.blocks, self.settings, self.notification_center)
 
-       
-        # Set plunger lane
+        # Physics engine
+        self.physics_engine = PhysicsEngine(
+            self.b, self.flippers, self.bumpers, self.blocks,
+            self.settings, self.notification_center
+        )
+
+        # Plunger lane
         self.lane_center = self.table_builder.get_lane_center()
         self.lane_bottom = self.settings.screen_height
-        
-        # Set ball's lane reference
         self.b.lane_x_center = self.lane_center
         self.b.lane_bottom = self.lane_bottom
-        
-        
+        self.b.reset()   # reposition ball in the lane
+
+        # Plunger
+        self.plunger = Plunger(
+            self.lane_center,
+            self.lane_bottom - 20,
+            max_pull=100,
+            pull_speed=5,
+            max_launch_speed=15
+        )
 
     def draw_bumpers(self):
         for bumper in self.bumpers:
             pygame.draw.circle(self.screen, bumper.c, (bumper.x, bumper.y), self.settings.bump_rad)
-    
+
     def draw_blocks(self):
         for block in self.blocks:
             pygame.draw.polygon(self.screen, block.c, block.vertices)
-            # Draw playfield boundaries (visual walls)
-            wall_color = (100, 100, 100)  # gray
-            # Left wall
-            pygame.draw.rect(self.screen, wall_color,
-                            (0, self.settings.top_margin,
-                            self.settings.lane_wall_thickness,
-                            self.settings.screen_height - self.settings.top_margin))
-            # Top wall
-            pygame.draw.rect(self.screen, wall_color,
-                            (0, self.settings.top_margin,
-                            self.settings.playfield_width,
-                            self.settings.lane_wall_thickness))
+
+        # Visual walls
+        wall_color = (100, 100, 100)
+        # Left wall
+        pygame.draw.rect(self.screen, wall_color,
+                         (0, self.settings.top_margin,
+                          self.settings.lane_wall_thickness,
+                          self.settings.screen_height - self.settings.top_margin))
+        # Top wall
+        pygame.draw.rect(self.screen, wall_color,
+                         (0, self.settings.top_margin,
+                          self.settings.playfield_width,
+                          self.settings.lane_wall_thickness))
 
     def run_game(self):
         clock = pygame.time.Clock()
@@ -144,7 +140,6 @@ class Pinball:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            # Dispatch to current state
             if self.state == GameState.MENU:
                 self._handle_menu_event(event)
             elif self.state == GameState.PLAYING:
@@ -166,21 +161,29 @@ class Pinball:
                 self.fr.activate()
             elif event.key == pygame.K_p:
                 self.state = GameState.PAUSED
-            elif event.key == pygame.K_r:   # reset ball (optional)
+            elif event.key == pygame.K_r:
                 self.b.reset()
+            elif event.key == pygame.K_SPACE:
+                if not self.b.launched:
+                    self.plunger.start_pull()
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT:
                 self.fl.active = False
                 self.fl.deactivate()
                 if self.b.trapped:
                     self.b.trapped = False
-                    self.b.dy = 0.21   # nudge downward to escape trap
+                    self.b.dy = 0.21
             elif event.key == pygame.K_RIGHT:
                 self.fr.active = False
                 self.fr.deactivate()
                 if self.b.trapped:
                     self.b.trapped = False
-                    self.b.dy = 0.21   # nudge downward to escape trap
+                    self.b.dy = 0.21
+            elif event.key == pygame.K_SPACE:
+                if not self.b.launched:
+                    speed = self.plunger.release()
+                    self.b.dy = -speed   # upward launch
+                    self.b.launched = True
 
     def _handle_paused_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
@@ -194,39 +197,44 @@ class Pinball:
 
     def _update(self):
         if self.state == GameState.PLAYING:
+            # Plunger update while pulling
+            if not self.b.launched and self.plunger.pulling:
+                self.plunger.update(1)   # dt=1 per frame (30 fps)
+
             for _ in range(self.settings.phys_runs):
                 self.physics_engine.update()
 
-            # Ball out-of-bounds check
             if self.b.lost:
                 time.sleep(1.5)
                 self.b.reset()
                 self.b.trapped = False
-                self.score_manager.reset() 
+                self.score_manager.reset()
 
     def _draw(self):
-        # Common drawing (background, score, game objects)
         self.screen.fill((0, 0, 0))
-        #if self.bg:
-            #self.screen.blit(self.bg, (0, self.settings.top_margin))
-        
+        # Background (optional)
+        # if self.bg:
+        #     self.screen.blit(self.bg, (0, self.settings.top_margin))
 
-        # Draw game elements
+        # Game elements
         self.fl.draw(self.screen)
         self.fr.draw(self.screen)
         self.b.draw_ball()
         self.draw_bumpers()
+        self.plunger.draw(self.screen)
         
+
+
         if not self.test_mode:
             self.draw_blocks()
 
-        # Draw overlay text based on state
+        # Overlay text
         if self.state == GameState.MENU:
             self._draw_menu_text()
         elif self.state == GameState.PAUSED:
             self._draw_paused_text()
 
-        # Score display (always)
+        # Score
         f = pygame.font.Font(None, 36)
         score_text = f.render(f'Score: {self.score_manager.score}', True, self.settings.wht)
         self.screen.blit(score_text, (20, 20))
@@ -247,12 +255,12 @@ class Pinball:
 
     def run_test(self, num_frames=500):
         print(f"=== HEADLESS TEST MODE ({num_frames} frames) ===")
-        self.score_manager.reset()   # ensure score starts at 0
+        self.score_manager.reset()
         running = True
         frame = 0
-        
+
         print(f"Initial ball: ({self.b.x}, {self.b.y}) velocity: ({self.b.dx}, {self.b.dy})")
-        
+
         while running and frame < num_frames:
             try:
                 for event in pygame.event.get():
@@ -260,22 +268,24 @@ class Pinball:
                         running = False
             except:
                 pass
-            
+
             self.physics_engine.update()
-            
+
             if frame % 50 == 0:
-                print(f"Frame {frame}: ball at ({self.b.x:.1f}, {self.b.y:.1f}), velocity ({self.b.dx:.2f}, {self.b.dy:.2f}), score={self.score_manager.score}")
-            
-            if self.b.check_collision():
-                print(f"Frame {frame}: BALL RESET - final position ({self.b.x}, {self.b.y})")
+                print(f"Frame {frame}: ball at ({self.b.x:.1f}, {self.b.y:.1f}), "
+                      f"velocity ({self.b.dx:.2f}, {self.b.dy:.2f}), score={self.score_manager.score}")
+
+            if self.b.lost:
+                print(f"Frame {frame}: BALL LOST - final position ({self.b.x}, {self.b.y})")
                 self.b.reset()
                 self.score_manager.reset()
-            
+
             frame += 1
-        
+
         print(f"=== TEST COMPLETE - Final score: {self.score_manager.score} ===")
         pygame.quit()
         input("Press Enter to exit...")
+
 
 if __name__ == '__main__':
     try:
@@ -284,11 +294,11 @@ if __name__ == '__main__':
         parser.add_argument('--test', action='store_true', help='Run in headless test mode')
         parser.add_argument('--frames', type=int, default=500, help='Number of frames to run in test mode')
         args = parser.parse_args()
-        
+
         print(f"Creating Pinball instance, test_mode={args.test}", flush=True)
         pb = Pinball(test_mode=args.test)
         print("Pinball instance created", flush=True)
-        
+
         if args.test:
             pb.run_test(num_frames=args.frames)
         else:
