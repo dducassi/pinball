@@ -76,7 +76,7 @@ class PhysicsEngine:
         ball_dx = ball.dx
         ball_dy = ball.dy
 
-        RESTING_THRESHOLD = 0.7
+        RESTING_THRESHOLD = 0.5
         # --- Flipper collisions ---
         for f in self.flippers:
             pivot_x, pivot_y = f.pivot
@@ -192,13 +192,13 @@ class PhysicsEngine:
             )
             if hit:
                 ball_x, ball_y, ball_dx, ball_dy = new_x, new_y, new_dx, new_dy
-                break   # only handle one block collision per step (original behavior)
+               
 
 
         # --- Bumpers collisions ---
         for bumper in self.bumpers:
             bump_x, bump_y = bumper.x, bumper.y
-            bump_rad = settings.bump_rad
+            bump_rad = bumper.radius
 
             dx = ball_x - bump_x
             dy = ball_y - bump_y
@@ -226,13 +226,13 @@ class PhysicsEngine:
 
         # --- Wall collisions (playfield boundaries) ---
         # Left wall
-        if ball_x - ball_radius < 0:
-            ball_x = ball_radius
+        if ball_x - ball_radius - self.settings.lane_wall_thickness < 0:
+            ball_x = ball_radius + self.settings.lane_wall_thickness
             if ball_dx < 0:
                 ball_dx = -ball_dx * settings.restitution
         # Top wall (including top margin)
-        if ball_y - ball_radius < settings.top_margin:
-            ball_y = settings.top_margin + ball_radius
+        if ball_y - ball_radius - self.settings.lane_wall_thickness < settings.top_margin:
+            ball_y = settings.top_margin + ball_radius + self.settings.lane_wall_thickness
             if ball_dy < 0:
                 ball_dy = -ball_dy * settings.restitution
 
@@ -254,7 +254,7 @@ class PhysicsEngine:
 
 
         # --- Trapped detection (ball between flipper and block) ---
-        TRAP_SPEED_THRESH = 0.2
+        TRAP_SPEED_THRESH = 0.1
         TRAP_DIST_EPSILON = 1.0  # extra allowance beyond ball_radius
 
         if not ball.trapped and math.hypot(ball_dx, ball_dy) < TRAP_SPEED_THRESH:
