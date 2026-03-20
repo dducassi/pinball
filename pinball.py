@@ -247,7 +247,7 @@ class Pinball:
 
     def _update_messages(self):
         if self.state == GameState.MENU:
-            self.main_message = "Start Quest"
+            self.main_message = "START YOUR QUEST"
             self.secondary_message = "'ENTER' TO INSERT COIN"
         elif self.state == GameState.PAUSED:
             self.main_message = "PAUSED"
