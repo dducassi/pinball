@@ -14,47 +14,44 @@ class TableBuilder:
         self.guide_height = 30 
         
 
-    def generate_bumpers(self, orb_image=None):
+    
+    def generate_bumpers(self, orb_image=None, small_orb_image=None):
         bumpers = []
-        # Wizard's Orb (center)
+        # Wizard's Orb (center) – use orb_image
         x = self.playfield_width / 2 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin
         bump_rad = 45
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, orb_image))
 
-        # Left lower pointer
+        # Left lower pointer (no image)
         x = self.playfield_width / 5 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin + self.settings.br * 2
         bump_rad = 9
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
-        # Left upper pointer
+        # Left upper pointer (no image)
         x = self.playfield_width / 9 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 6
         bump_rad = 4.5
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
-        # Right pointer
+        # Right pointer (no image)
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 2
         bump_rad = 7
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
-        # Lower left bumper
+        # Lower left bumper – use small_orb_image
         x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 14
-        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, small_orb_image))
 
-        # Lower right bumper
+        # Lower right bumper – use small_orb_image
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 14
-        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
-
-        return bumpers
-
-
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, small_orb_image))
 
         return bumpers
     
