@@ -55,6 +55,12 @@ class Pinball:
         self.secondary_message = ""
         self._update_messages()
 
+        # Temporary message system
+        self.temp_message = ""
+        self.temp_message_time = 0
+        self.temp_message_duration = 2000  # milliseconds
+
+
         if test_mode:
             self.screen = pygame.display.set_mode((self.settings.screen_width,
                                                    self.settings.screen_height))
@@ -66,6 +72,10 @@ class Pinball:
 
         self.notification_center = NotificationCenter()
         self.score_manager = ScoreManager(self.notification_center, self.settings)
+
+        
+        # Observe bumper hits
+        self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
 
         # Ball
         self.b = Ball(self)
@@ -215,14 +225,14 @@ class Pinball:
 
     def _update_messages(self):
         if self.state == GameState.MENU:
-            self.main_message = "Press S to start"
-            self.secondary_message = ""
+            self.main_message = "Start Quest"
+            self.secondary_message = "Press S to start"
         elif self.state == GameState.PAUSED:
             self.main_message = "PAUSED"
             self.secondary_message = ""
         elif self.state == GameState.GAME_OVER:
             self.main_message = "GAME OVER"
-            self.secondary_message = ""
+            self.secondary_message = "Press S to start"
         else:  # PLAYING
             self.main_message = ""
             self.secondary_message = ""
@@ -252,19 +262,40 @@ class Pinball:
                 math.hypot(self.b.dx, self.b.dy) < 0.5):
                 self.b.launched = False
 
-            # Ball lost
-            if self.b.y > self.settings.screen_height * 1.05:
-                self.main_message = 'BALL LOST'
+            # Ball lost (physics engine sets self.b.lost)
             if self.b.lost:
+                self.temp_message = 'BALL LOST'
+                self.temp_message_time = pygame.time.get_ticks()
                 self.lives -= 1
                 if self.lives > 0:
-                    self.b.trapped = False
-                    self.main_message = 'NEW BALL'
                     self.b.reset()
-                    time.sleep(1.5)
-                    
+                    self.b.trapped = False
                 else:
                     self._set_state(GameState.GAME_OVER)
+
+    # Check for Orb hits:
+    def on_bumper_hit(self, bumper):
+        """Handle bumper hit: set a temporary message based on bumper size and color."""
+        if self.state != GameState.PLAYING:
+            return  # only show messages during gameplay
+        # Determine message
+        if bumper.radius > 20:  # large bumper
+            if bumper.c == self.settings.blu:
+                msg = "ORB OF POWER"
+            elif bumper.c == self.settings.red:
+                msg = "FIREBALL"
+            elif bumper.c == self.settings.ylw:
+                msg = "BALL LIGHTNING"
+            else:
+                msg = "BUMPER!"
+        else:
+            msg = ""  # small bumpers no message (or you could add others)
+        if msg:
+            self.temp_message = msg
+            self.temp_message_time = pygame.time.get_ticks()
+           
+                    
+    
 
             
                 
@@ -276,14 +307,7 @@ class Pinball:
         if self.bg:
             self.screen.blit(self.bg, (self.settings.lane_wall_thickness, self.playfield_y))
 
-        for bumper in self.bumpers:
-                if bumper.radius > 20:
-                    if self.b.launched and bumper.c == self.settings.blu:
-                        self.main_message = 'ORB OF POWER'
-                    elif self.b.launched and bumper.c == self.settings.red:
-                        self.main_message = 'FIREBALL'
-                    elif self.b.launched and bumper.c == self.settings.ylw:
-                        self.main_message = 'BALL LIGHTNING'
+        
 
         # Game elements
         self.fl.draw(self.screen)
@@ -320,24 +344,36 @@ class Pinball:
         pygame.display.flip()
 
     def _draw_messages(self):
-        if not self.main_message and not self.secondary_message:
-            return
-        try:
-            main_font = pygame.font.Font(font_path, 14)
-            second_font = pygame.font.Font(font_path, 9)
-        except:
-            main_font = pygame.font.Font(None, 24)
-            second_font = pygame.font.Font(font_path, 12)
-        
+        now = pygame.time.get_ticks()
+        # Check if temporary message exists and is still valid
+        if self.temp_message and now - self.temp_message_time < self.temp_message_duration:
+            main = self.temp_message
+            secondary = ""
+        else:
+            self.temp_message = ""  # clear expired message
+            main = self.main_message
+            secondary = self.secondary_message
 
-        if self.main_message:
-            text = main_font.render(self.main_message, True, self.settings.wht)
+        if not main and not secondary:
+            return
+
+        try:
+            if main:
+                font = pygame.font.Font(font_path, 14)
+            if secondary:
+                second_font = pygame.font.Font(font_path, 8)
+        except:
+            font = pygame.font.Font(None, 24)
+
+
+        if main:
+            text = font.render(main, True, self.settings.wht)
             text_rect = text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 2))
             self.screen.blit(text, text_rect)
-        if self.secondary_message:
-            text2 = second_font.render(self.secondary_message, True, self.settings.wht)
-            text2_rect = text2.get_rect(center=(self.settings.screen_width // 2,
-                                                 self.settings.top_margin // 2 + text.get_height() + 5))
+        if secondary:
+            text2 = second_font.render(secondary, True, self.settings.wht)
+            y_offset = 7 * self.settings.top_margin // 10 + (text.get_height() + 5 if main else 0)
+            text2_rect = text2.get_rect(center=(90, y_offset))
             self.screen.blit(text2, text2_rect)
 
     # Test mode
