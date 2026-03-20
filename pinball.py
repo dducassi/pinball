@@ -144,6 +144,10 @@ class Pinball:
         else:
             self.bg = None
 
+        self.ball_save_active = False
+        self.ball_save_start_time = 0
+        self.ball_save_duration = 10000  # 10 seconds in milliseconds  
+
     # Drawing helpers
     def draw_bumpers(self):
         for bumper in self.bumpers:
@@ -188,11 +192,11 @@ class Pinball:
                 self._handle_game_over_event(event)
 
     def _handle_menu_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
             self._start_game()
 
     def _handle_game_over_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
             self._start_game()
 
     def _handle_playing_event(self, event):
@@ -209,7 +213,8 @@ class Pinball:
                 self.b.reset()
             elif event.key == pygame.K_SPACE:
                 if not self.b.launched:
-                    self.plunger.start_pull()
+                    self.plunger.start_pull()   # <-- start pull on press
+
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT:
                 self.fl.active = False
@@ -228,7 +233,9 @@ class Pinball:
                     speed = self.plunger.release()
                     self.b.dy = -speed
                     self.b.launched = True
-
+                    self.ball_save_active = True
+                    self.ball_save_start_time = pygame.time.get_ticks()
+                    self.secondary_message = 'SAVE'   # display during grace period
     def _handle_paused_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
             self._set_state(GameState.PLAYING)
@@ -241,13 +248,13 @@ class Pinball:
     def _update_messages(self):
         if self.state == GameState.MENU:
             self.main_message = "Start Quest"
-            self.secondary_message = "Press 'S' to start"
+            self.secondary_message = "'ENTER' TO INSERT COIN"
         elif self.state == GameState.PAUSED:
             self.main_message = "PAUSED"
             self.secondary_message = ""
         elif self.state == GameState.GAME_OVER:
             self.main_message = "GAME OVER"
-            self.secondary_message = "Press 'S' to start"
+            self.secondary_message = "'ENTER' TO INSERT COIN"
         else:  # PLAYING
             self.main_message = ""
             self.secondary_message = ""
@@ -259,6 +266,7 @@ class Pinball:
         self.b.trapped = False
         self.score_manager.reset()
         self.lives = 3
+        self.ball_save_active = False
 
     # Physics update
     def _update(self):
@@ -277,16 +285,34 @@ class Pinball:
                 math.hypot(self.b.dx, self.b.dy) < 0.5):
                 self.b.launched = False
 
+            # Ball save timer – clear "SAVE" after 10 seconds
+            if self.ball_save_active and (pygame.time.get_ticks() - self.ball_save_start_time) >= self.ball_save_duration:
+                self.ball_save_active = False
+                self.secondary_message = ''
+
             # Ball lost (physics engine sets self.b.lost)
             if self.b.lost:
-                self.temp_message = 'BALL LOST'
-                self.temp_message_time = pygame.time.get_ticks()
-                self.lives -= 1
-                if self.lives > 0:
-                    self.b.reset()
-                    self.b.trapped = False
-                else:
-                    self._set_state(GameState.GAME_OVER)
+             now = pygame.time.get_ticks()
+             # Check if ball save is active and within time window
+             if self.ball_save_active and (now - self.ball_save_start_time) < self.ball_save_duration:
+                 # Ball saved!
+                 self.temp_message = 'BALL SAVED'
+                 self.secondary_message = ''
+                 self.temp_message_time = now
+                 self.ball_save_active = False   # used up
+                 self.b.reset()
+                 self.b.trapped = False
+             else:
+                 self.temp_message = 'BALL LOST'
+                 self.secondary_message = ''
+                 self.temp_message_time = now
+                 self.lives -= 1
+                 if self.lives > 0:
+                     self.b.reset()
+                     self.b.trapped = False
+                 else:
+                     self._set_state(GameState.GAME_OVER)
+
 
     # Check for Orb hits:
     def on_bumper_hit(self, bumper):
@@ -294,14 +320,15 @@ class Pinball:
         if self.state != GameState.PLAYING:
             return
         if bumper.radius > 20:  # large bumper
-            if bumper.color == self.settings.blu:
-                msg = "ORB OF POWER"
-            elif bumper.color == self.settings.red:
-                msg = "FIREBALL"
-            elif bumper.color == self.settings.ylw:
-                msg = "BALL LIGHTNING"
-            else:
-                msg = "BUMPER!"
+            if bumper.color == (0,100,255):
+                msg = "ORB OF POWER!"
+            elif bumper.color == (255, 30, 0):
+                msg = "FIREBALL!"
+            elif bumper.color == (255,255,255):
+                msg = "BALL LIGHTNING!"
+                
+             
+
         else:
             msg = ""
         if msg:
@@ -359,37 +386,39 @@ class Pinball:
 
     def _draw_messages(self):
         now = pygame.time.get_ticks()
-        # Check if temporary message exists and is still valid
+        
+        # Determine main message (temporary or state)
         if self.temp_message and now - self.temp_message_time < self.temp_message_duration:
             main = self.temp_message
-            secondary = ""
+            secondary = self.secondary_message
         else:
-            self.temp_message = ""  # clear expired message
+            self.temp_message = ""
             main = self.main_message
             secondary = self.secondary_message
-
+        
         if not main and not secondary:
             return
 
         try:
-            if main:
-                font = pygame.font.Font(font_path, 13)
-            if secondary:
-                second_font = pygame.font.Font(font_path, 8)
+            font = pygame.font.Font(font_path, 13)
+            secondary_font = pygame.font.Font(font_path, 8) if secondary else None
         except:
             font = pygame.font.Font(None, 24)
+            secondary_font = pygame.font.Font(None, 16) if secondary else None
 
-
+        # Main message (centered in top margin)
         if main:
-            text = font.render(main, True, self.settings.wht)
-            text_rect = text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 2))
-            self.screen.blit(text, text_rect)
-        if secondary:
-            text2 = second_font.render(secondary, True, self.settings.wht)
-            y_offset = 7 * self.settings.top_margin // 10 + (text.get_height() + 5 if main else 0)
-            text2_rect = text2.get_rect(center=(90, y_offset))
-            self.screen.blit(text2, text2_rect)
+            main_surf = font.render(main, True, self.settings.wht)
+            main_rect = main_surf.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 2))
+            self.screen.blit(main_surf, main_rect)
 
+        # Secondary message (positioned lower left, below score)
+        if secondary:
+            sec_font = secondary_font if secondary_font else font
+            sec_surf = sec_font.render(secondary, True, self.settings.wht)
+            # Place below score (score is at (12, 65); use (12, 90) for secondary)
+            sec_rect = sec_surf.get_rect(topleft=(12, 90))
+            self.screen.blit(sec_surf, sec_rect)
     # Test mode
     def run_test(self, num_frames=500):
         print(f"=== HEADLESS TEST MODE ({num_frames} frames) ===")
