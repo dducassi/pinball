@@ -73,6 +73,15 @@ class Pinball:
             print("Crystal orb image not found, using fallback circle.")
             self.orb_image = None
 
+        # Load Small Orb image (for lower bumpers)
+        try:
+            small_img = pygame.image.load(os.path.join(base_dir, 'small_orb.png')).convert_alpha()
+            self.small_orb_image = small_img
+            print("Small orb image loaded, size:", small_img.get_size())
+            # No scaling here – Bumper will scale to its radius
+        except:
+            print("Small orb image not found, using fallback circle.")
+            self.small_orb_image = None
 
         pygame.display.set_caption('Wizard Pinball')
 
@@ -102,7 +111,7 @@ class Pinball:
 
         # Table elements
         self.table_builder = TableBuilder(self.settings)
-        self.bumpers = self.table_builder.generate_bumpers(self.orb_image)
+        self.bumpers = self.table_builder.generate_bumpers(self.orb_image, self.small_orb_image)
         self.blocks = self.table_builder.generate_blocks()
 
         # Physics engine
@@ -364,7 +373,7 @@ class Pinball:
 
         try:
             if main:
-                font = pygame.font.Font(font_path, 14)
+                font = pygame.font.Font(font_path, 13)
             if secondary:
                 second_font = pygame.font.Font(font_path, 8)
         except:
