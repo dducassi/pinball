@@ -73,7 +73,7 @@ class Pinball:
             print("Crystal orb image not found, using fallback circle.")
             self.orb_image = None
 
-        # Load Small Orb image (for lower bumpers)
+        # Load Small Orb image (for lower bumpers)p
         try:
             small_img = pygame.image.load(os.path.join(base_dir, 'small_orb.png')).convert_alpha()
             self.small_orb_image = small_img
@@ -92,6 +92,25 @@ class Pinball:
             print("Tiny Bumper image not found, using fallback circle.")
             self.tiny_bumper_image = None
 
+         # Load pinball image (ball)
+        try:
+            ball_img = pygame.image.load(os.path.join(base_dir, 'pinball.png')).convert_alpha()
+            self.ball_image = ball_img
+            print("Pinball image loaded, size:", ball_img.get_size())
+        except:
+            print("Pinball image not found, using fallback circle.")
+            self.ball_image = None
+        self.b = Ball(self, self.ball_image)
+
+        # Load block texture
+        try:
+            block_texture = pygame.image.load(os.path.join(base_dir, 'block_texture.png')).convert()
+            self.block_texture = block_texture
+            print("Block texture loaded")
+        except:
+            print("Block texture not found, using solid colors.")
+            self.block_texture = None
+
         pygame.display.set_caption('Wizard Pinball')
 
         self.notification_center = NotificationCenter()
@@ -102,8 +121,7 @@ class Pinball:
         self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
 
         # Ball
-        self.b = Ball(self)
-        self.lives = 3
+        self.lives = 4
 
         # Flippers
         self.fl = Flipper(
@@ -119,7 +137,7 @@ class Pinball:
         self.flippers = [self.fl, self.fr]
 
         # Table elements
-        self.table_builder = TableBuilder(self.settings)
+        self.table_builder = TableBuilder(self.settings, self.block_texture)
         self.bumpers = self.table_builder.generate_bumpers(self.orb_image, self.small_orb_image, self.tiny_bumper_image)
         self.blocks = self.table_builder.generate_blocks()
 
@@ -164,18 +182,8 @@ class Pinball:
                 
     def draw_blocks(self):
         for block in self.blocks:
-            pygame.draw.polygon(self.screen, block.c, block.vertices)
-        # Visual walls
-        wall_color = (100, 100, 100)
-        pygame.draw.rect(self.screen, wall_color,
-                         (0, self.settings.top_margin,
-                          self.settings.lane_wall_thickness,
-                          self.settings.screen_height - self.settings.top_margin))
-        pygame.draw.rect(self.screen, wall_color,
-                         (0, self.settings.top_margin,
-                          self.settings.screen_width,
-                          self.settings.lane_wall_thickness))
-
+            block.draw(self.screen)
+        
     # Game loop
     def run_game(self):
         clock = pygame.time.Clock()
@@ -370,7 +378,7 @@ class Pinball:
             title_font = pygame.font.Font(font_path, 12)
         except:
             title_font = pygame.font.Font(None, 36)
-        title_text = title_font.render('WIZARD PINBALL', True, self.settings.wht)
+        title_text = title_font.render("WIZARD'S TOWER", True, self.settings.wht)
         title_rect = title_text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 5))
         self.screen.blit(title_text, title_rect)
 
