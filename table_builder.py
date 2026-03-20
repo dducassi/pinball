@@ -15,19 +15,42 @@ class TableBuilder:
 
     def generate_bumpers(self):
         bumpers = []
+
+        # Wizard's Orb!
         x = self.playfield_width / 2 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin
         bump_rad = 45
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
-        x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
-        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 18
+        # Left lower pointer
+        x = self.playfield_width / 5 + self.settings.lane_wall_thickness
+        y = self.playfield_height / 5 + self.top_margin + self.settings.br * 2
+        bump_rad = 9
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
+        #Left upper pointer
+        x = self.playfield_width / 9 + self.settings.lane_wall_thickness
+        y = self.playfield_height / 5  + self.top_margin - self.settings.br * 6
+        bump_rad = 4.5
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
+
+
+        # right pointer
+        x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness
+        y = self.playfield_height / 5 + self.top_margin - self.settings.br *2
+        bump_rad = 7
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
+
+        # Lower left bumper
+        x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
+        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
+        bump_rad = 14
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
+
+        # Lower right bumper
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 18
+        bump_rad = 14
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
 
