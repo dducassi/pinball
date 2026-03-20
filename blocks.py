@@ -1,26 +1,39 @@
 # Class for blocks
-
+# blocks.py
 import pygame
 import math
 
 class Block:
-    def __init__(self, vertices, color, restitution):
-        """
-        vertices: list of (x, y) tuples defining a convex polygon in order.
-        color: RGB tuple or color constant.
-        bounce: restitution coefficient.
-        """
+    def __init__(self, vertices, color, restitution, image=None):
         self.vertices = vertices
         self.c = color
         self.restitution = restitution
+        self.image = None
+        self.rect = None
 
-        # Build edges from vertices (works for any polygon)
+        if image:
+            # Compute bounding box
+            xs = [v[0] for v in vertices]
+            ys = [v[1] for v in vertices]
+            w = max(xs) - min(xs)
+            h = max(ys) - min(ys)
+            # Scale image to fit bounding box
+            self.image = pygame.transform.scale(image, (int(w), int(h)))
+            self.rect = pygame.Rect(min(xs), min(ys), w, h)
+
+        # Build edges for collision
         self.edges = []
         n = len(vertices)
         for i in range(n):
             x1, y1 = vertices[i]
             x2, y2 = vertices[(i+1) % n]
             self.edges.append((x1, y1, x2, y2))
+
+    def draw(self, screen):
+        if self.image:
+            screen.blit(self.image, self.rect)
+        else:
+            pygame.draw.polygon(screen, self.c, self.vertices)
 
     def _closest_point_on_segment(self, px, py, x1, y1, x2, y2):
         """Return closest point on segment (x1,y1)-(x2,y2) to (px,py)."""
