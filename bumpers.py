@@ -59,7 +59,7 @@ class Bumper:
             alpha = max(0, 255 * (1 - (now - self.glow_start_time) / self.glow_duration))
             # Create a surface for the glow
             glow_surf = pygame.Surface((glow_radius*2, glow_radius*2), pygame.SRCALPHA)
-            pygame.draw.circle(glow_surf, (*self.color[:9], int(alpha)), (glow_radius, glow_radius), glow_radius)
+            pygame.draw.circle(glow_surf, (*self.color, int(alpha)), (glow_radius, glow_radius), glow_radius)
             screen.blit(glow_surf, (int(self.x - glow_radius), int(self.y - glow_radius)), special_flags=pygame.BLEND_ALPHA_SDL2)
 
        
