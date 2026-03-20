@@ -330,12 +330,12 @@ class Pinball:
     def _draw_game_over_text(self):
         f = pygame.font.Font(font_path, 14)
         text = f.render("GAME OVER", True, self.settings.red)
-        self.screen.blit(text, ((self.settings.screen_width - text.get_width()) // 2 - self.settings.right_margin,
+        self.screen.blit(text, ((self.settings.screen_width - text.get_width()) // 2,
                                  (self.settings.top_margin / 3 + 4)))
         
-        f2 = pygame.font.Font(font_path, 12)
+        f2 = pygame.font.Font(font_path, 14)
         prompt = f2.render("Press S to restart", True, self.settings.wht)
-        self.screen.blit(prompt, ((self.settings.playfield_width - prompt.get_width()) // 2 - self.settings.right_margin,
+        self.screen.blit(prompt, ((self.settings.playfield_width - prompt.get_width()) // 2,
                                    (self.settings.screen_height - prompt.get_height()) // 2))
 
     def run_test(self, num_frames=500):
