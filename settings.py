@@ -17,8 +17,8 @@ class Settings:
         self.right_margin = 15 + self.br * 2          # width of right plunger lane
 
         # Screen dimensions
-        self.screen_width = 275 + self.right_margin
-        self.screen_height = 550 + self.top_margin
+        self.screen_width = 300 + self.right_margin
+        self.screen_height = 600 + self.top_margin
 
         
         
@@ -47,16 +47,16 @@ class Settings:
         self.pph = 100  # Points per hit
         self.bump_bounce = 1.2
 
-        # Lane properties:
+        # Lane properties:s
         self.lane_wall_thickness = 7
 
         # Colors
         self.wht = (255, 255, 255)
         self.blk = (0, 0, 0)
-        self.red = (255, 0, 0)
+        self.red = (255, 30, 0)
         self.blu = (0, 100, 255)
         self.grn = (0, 255, 0)
-        self.ylw = (255, 255, 0)
+        self.ylw = (255, 255, 255)
         self.ong = (255, 130, 0)
         self.ppl = (130, 0, 255)
         self.gry = (100, 100, 100)
