@@ -65,7 +65,7 @@ class TableBuilder:
             (lane_right, self.top_margin),                     # top right
             (lane_right, self.top_margin + guide_height)       # bottom right
         ]
-        return Block(vertices, (100,100,100), restitution=self.settings.restitution)
+        return Block(vertices, (150,150,150), restitution=self.settings.restitution)
 
     def generate_one_way_wall(self):
         """Create a thin vertical wall just left of the lane exit to prevent re‑entry."""
@@ -89,7 +89,7 @@ class TableBuilder:
             (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
             (2/7 * self.playfield_width, self.screen_height)
         ]
-        blocks.append(Block(left_vertices, self.settings.gry, self.settings.restitution))
+        blocks.append(Block(left_vertices, self.settings.slv, self.settings.restitution))
 
         # Right block (main) – no texture
         right_vertices = [
@@ -98,7 +98,7 @@ class TableBuilder:
             (self.playfield_width - 2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
             (self.playfield_width - 2/7 * self.playfield_width, self.screen_height)
         ]
-        blocks.append(Block(right_vertices, self.settings.gry, self.settings.restitution))
+        blocks.append(Block(right_vertices, self.settings.slv, self.settings.restitution))
 
         # Funnel blocks above left and right main blocks – no texture
         funnel_height = 50
@@ -111,7 +111,7 @@ class TableBuilder:
             (2/7 * self.playfield_width - self.settings.br * 1.1, left_bottom_y),
             (2/7 * self.playfield_width - self.settings.br * 1.7, left_bottom_y - funnel_height)
         ]
-        blocks.append(Block(left_funnel_vertices, self.settings.gry, restitution=self.settings.restitution))
+        blocks.append(Block(left_funnel_vertices, self.settings.slv, restitution=self.settings.restitution))
 
         # Right funnel
         right_top_y = self.top_margin + self.playfield_height - 9/28 * self.playfield_height
@@ -122,7 +122,7 @@ class TableBuilder:
             (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.1, right_bottom_y),
             (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.7, right_bottom_y - funnel_height)
         ]
-        blocks.append(Block(right_funnel_vertices, self.settings.gry, restitution=self.settings.restitution))
+        blocks.append(Block(right_funnel_vertices, self.settings.slv, restitution=self.settings.restitution))
 
         # Bottom stopper block (untextured)
         stopper_height = 10
