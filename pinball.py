@@ -38,14 +38,16 @@ font_path = os.path.join(base_dir, 'PressStart2P-Regular.ttf')
 class Pinball:
 
     def __init__(self, test_mode=False):
+        
         self.test_mode = test_mode
         if test_mode:
             os.environ['SDL_VIDEODRIVER'] = 'dummy'
             os.environ['SDL_AUDIODRIVER'] = 'dummy'
         pygame.init()
-
+        
         self.settings = Settings()
         self.bg = None
+        self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
         self.state = GameState.MENU
         self.playfield_x = 0
         self.playfield_y = self.settings.top_margin
@@ -60,14 +62,18 @@ class Pinball:
         self.temp_message_time = 0
         self.temp_message_duration = 2000  # milliseconds
 
+        # Load Crystal Orb image
+        try:
+            img = pygame.image.load(os.path.join(base_dir, 'crystal_orb.png')).convert_alpha()
+            self.orb_image = img
+            print("Crystal orb image loaded, size:", img.get_size())
+            desired_size = 180 # radius 45 * 2
+            self.orb_image = pygame.transform.scale(img, (desired_size, desired_size))
+        except:
+            print("Crystal orb image not found, using fallback circle.")
+            self.orb_image = None
 
-        if test_mode:
-            self.screen = pygame.display.set_mode((self.settings.screen_width,
-                                                   self.settings.screen_height))
-        else:
-            self.screen = pygame.display.set_mode((self.settings.screen_width,
-                                                   self.settings.screen_height), pygame.RESIZABLE)
-            self.bg = pygame.image.load(os.path.join(base_dir, 'wizard.png'))
+
         pygame.display.set_caption('Wizard Pinball')
 
         self.notification_center = NotificationCenter()
@@ -96,7 +102,7 @@ class Pinball:
 
         # Table elements
         self.table_builder = TableBuilder(self.settings)
-        self.bumpers = self.table_builder.generate_bumpers()
+        self.bumpers = self.table_builder.generate_bumpers(self.orb_image)
         self.blocks = self.table_builder.generate_blocks()
 
         # Physics engine
@@ -132,8 +138,8 @@ class Pinball:
     # Drawing helpers
     def draw_bumpers(self):
         for bumper in self.bumpers:
-            pygame.draw.circle(self.screen, bumper.c, (bumper.x, bumper.y), bumper.radius)
-
+            bumper.draw(self.screen)
+                
     def draw_blocks(self):
         for block in self.blocks:
             pygame.draw.polygon(self.screen, block.c, block.vertices)
@@ -226,13 +232,13 @@ class Pinball:
     def _update_messages(self):
         if self.state == GameState.MENU:
             self.main_message = "Start Quest"
-            self.secondary_message = "Press S to start"
+            self.secondary_message = "Press 'S' to start"
         elif self.state == GameState.PAUSED:
             self.main_message = "PAUSED"
             self.secondary_message = ""
         elif self.state == GameState.GAME_OVER:
             self.main_message = "GAME OVER"
-            self.secondary_message = "Press S to start"
+            self.secondary_message = "Press 'S' to start"
         else:  # PLAYING
             self.main_message = ""
             self.secondary_message = ""
@@ -277,19 +283,18 @@ class Pinball:
     def on_bumper_hit(self, bumper):
         """Handle bumper hit: set a temporary message based on bumper size and color."""
         if self.state != GameState.PLAYING:
-            return  # only show messages during gameplay
-        # Determine message
+            return
         if bumper.radius > 20:  # large bumper
-            if bumper.c == self.settings.blu:
+            if bumper.color == self.settings.blu:
                 msg = "ORB OF POWER"
-            elif bumper.c == self.settings.red:
+            elif bumper.color == self.settings.red:
                 msg = "FIREBALL"
-            elif bumper.c == self.settings.ylw:
+            elif bumper.color == self.settings.ylw:
                 msg = "BALL LIGHTNING"
             else:
                 msg = "BUMPER!"
         else:
-            msg = ""  # small bumpers no message (or you could add others)
+            msg = ""
         if msg:
             self.temp_message = msg
             self.temp_message_time = pygame.time.get_ticks()
