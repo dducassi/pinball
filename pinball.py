@@ -33,6 +33,7 @@ if getattr(sys, 'frozen', False):
 else:
     base_dir = script_dir
 
+font_path = os.path.join(base_dir, 'PressStart2P-Regular.ttf')
 
 class Pinball:
 
@@ -57,6 +58,7 @@ class Pinball:
             self.screen = pygame.display.set_mode((self.settings.screen_width,
                                                    self.settings.screen_height), pygame.RESIZABLE)
             self.bg = pygame.image.load(os.path.join(base_dir, 'wizard.png'))
+            
         pygame.display.set_caption('Wizard Pinball')
 
         self.notification_center = NotificationCenter()
@@ -64,6 +66,8 @@ class Pinball:
 
         # Ball
         self.b = Ball(self)
+
+        self.lives = 3   # starting lives
 
         # Flippers (positioned within playfield)
         self.fl = Flipper(
@@ -169,10 +173,18 @@ class Pinball:
                 self._handle_playing_event(event)
             elif self.state == GameState.PAUSED:
                 self._handle_paused_event(event)
+            elif self.state == GameState.GAME_OVER:
+                self._handle_game_over_event(event)
 
     def _handle_menu_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
             self._start_game()
+
+    def _handle_game_over_event(self, event):
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+            self._start_game()   # restart
+
+
 
     def _handle_playing_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -217,6 +229,7 @@ class Pinball:
         self.b.reset()
         self.b.trapped = False
         self.score_manager.reset()
+        self.lives = 3 
 
     def _update(self):
         if self.state == GameState.PLAYING:
@@ -234,11 +247,15 @@ class Pinball:
                 math.hypot(self.b.dx, self.b.dy) < 0.5):
                 self.b.launched = False
 
+            # If ball lost, reduce life or game over 
             if self.b.lost:
-                time.sleep(1.5)
-                self.b.reset()
-                self.b.trapped = False
-                self.score_manager.reset()
+                self.lives -= 1
+                if self.lives > 0:
+                    self.b.reset()
+                    self.b.trapped = False
+                else:
+                    self.state = GameState.GAME_OVER
+
 
     def _draw(self):
         self.screen.fill((0, 0, 0))
@@ -273,15 +290,25 @@ class Pinball:
             # Fallback to default font if custom font not found
             title_font = pygame.font.Font(None, 36)
 
-        # Score (use a different font or the same – here we keep default)
-        f = pygame.font.Font(font_path, 16)
-        score_text = f.render(f'Score: {self.score_manager.score}', True, self.settings.wht)
-        self.screen.blit(score_text, (12, 60))
 
         # Title – use the loaded font
         title_text = title_font.render('WIZARD PINBALL', True, self.settings.wht)
-        title_rect = title_text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 4))
+        title_rect = title_text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 5))
         self.screen.blit(title_text, title_rect)
+
+        # Score
+        f = pygame.font.Font(font_path, 12)
+        score_text = f.render(f'Score: {self.score_manager.score}', True, self.settings.wht)
+        self.screen.blit(score_text, (12, 65))
+
+        # Lives display (right of score)
+        f = pygame.font.Font(font_path, 12)
+        lives_text = f.render(f'Balls: {self.lives}', True, self.settings.wht)
+        self.screen.blit(lives_text, (self.settings.screen_width - 110, 65)) 
+
+        # Game over text
+        if self.state == GameState.GAME_OVER:
+            self._draw_game_over_text()
 
         
 
@@ -289,16 +316,27 @@ class Pinball:
 
 
     def _draw_menu_text(self):
-        f = pygame.font.Font(None, 36)
+        f = pygame.font.Font(font_path, 14)
         text = f.render("Press S to start", True, self.settings.wht)
         self.screen.blit(text, ((self.settings.screen_width - text.get_width()) // 2,
                                 (self.settings.screen_height - text.get_height()) // 2))
 
     def _draw_paused_text(self):
-        f = pygame.font.Font(None, 36)
+        f = pygame.font.Font(font_path, 12)
         text = f.render("Paused", True, self.settings.wht)
         self.screen.blit(text, ((self.settings.screen_width - text.get_width()) // 2,
                                 (self.settings.screen_height - text.get_height()) // 2))
+        
+    def _draw_game_over_text(self):
+        f = pygame.font.Font(font_path, 14)
+        text = f.render("GAME OVER", True, self.settings.red)
+        self.screen.blit(text, ((self.settings.screen_width - text.get_width()) // 2 - self.settings.right_margin,
+                                 (self.settings.top_margin / 3 + 4)))
+        
+        f2 = pygame.font.Font(font_path, 12)
+        prompt = f2.render("Press S to restart", True, self.settings.wht)
+        self.screen.blit(prompt, ((self.settings.playfield_width - prompt.get_width()) // 2 - self.settings.right_margin,
+                                   (self.settings.screen_height - prompt.get_height()) // 2))
 
     def run_test(self, num_frames=500):
         print(f"=== HEADLESS TEST MODE ({num_frames} frames) ===")
