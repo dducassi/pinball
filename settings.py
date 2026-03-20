@@ -44,7 +44,7 @@ class Settings:
         self.num_bumps = 3
         self.ocolors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0),
                          (255, 130, 0), (130, 0, 255)]  # Colors for the bumpers
-        self.pph = 10  # Points per hit
+        self.pph = 100  # Points per hit
         self.bump_bounce = 1.2
 
         # Lane properties:
