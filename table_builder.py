@@ -3,8 +3,9 @@ from blocks import Block
 from one_way_block import OneWayBlock 
 
 class TableBuilder:
-    def __init__(self, settings):
+    def __init__(self, settings, block_texture=None):
         self.settings = settings
+        self.block_texture = block_texture
         self.playfield_width = settings.playfield_width
         self.playfield_height = settings.playfield_height
         self.top_margin = settings.top_margin
@@ -12,8 +13,6 @@ class TableBuilder:
         self.screen_width = settings.screen_width
         self.screen_height = settings.screen_height
         self.guide_height = 30 
-        
-
     
     def generate_bumpers(self, orb_image=None, small_orb_image=None, tiny_bumper_image=None):
         bumpers = []
@@ -79,31 +78,31 @@ class TableBuilder:
             (wall_x - thickness, self.top_margin + self.guide_height * 2),
             (wall_x - thickness, self.top_margin)
         ]
-        return OneWayBlock(vertices, (100,100,100), restitution=self.settings.restitution, direction='left')
+        return OneWayBlock(vertices, (100,100,100), restitution=self.settings.restitution, direction='left', image=self.block_texture)
     
     def generate_blocks(self):
         blocks = []
-        # Left block
+        # Left block (main) – no texture
         left_vertices = [
             (0, self.screen_height),
             (0, self.top_margin + self.playfield_height - 4/14 * self.playfield_height),
             (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
             (2/7 * self.playfield_width, self.screen_height)
         ]
-        blocks.append(Block(left_vertices, self.settings.gry, restitution=self.settings.restitution))
+        blocks.append(Block(left_vertices, self.settings.gry, self.settings.restitution))
 
-        # Right block
+        # Right block (main) – no texture
         right_vertices = [
             (self.playfield_width, self.screen_height),
             (self.playfield_width, self.top_margin + self.playfield_height - 4/14 * self.playfield_height),
             (self.playfield_width - 2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
             (self.playfield_width - 2/7 * self.playfield_width, self.screen_height)
         ]
-        blocks.append(Block(right_vertices, self.settings.gry, restitution=self.settings.restitution))
+        blocks.append(Block(right_vertices, self.settings.gry, self.settings.restitution))
 
-        # Funnel blocks above left and right main blocks
+        # Funnel blocks above left and right main blocks – no texture
         funnel_height = 50
-        # Left funnel (same slope as left block)
+        # Left funnel
         left_top_y = self.top_margin + self.playfield_height - 9/28 * self.playfield_height
         left_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         left_funnel_vertices = [
@@ -114,7 +113,7 @@ class TableBuilder:
         ]
         blocks.append(Block(left_funnel_vertices, self.settings.gry, restitution=self.settings.restitution))
 
-        # Right funnel (same slope as right block)
+        # Right funnel
         right_top_y = self.top_margin + self.playfield_height - 9/28 * self.playfield_height
         right_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         right_funnel_vertices = [
@@ -125,7 +124,7 @@ class TableBuilder:
         ]
         blocks.append(Block(right_funnel_vertices, self.settings.gry, restitution=self.settings.restitution))
 
-        # Bottom stopper block
+        # Bottom stopper block (untextured)
         stopper_height = 10
         stopper_top = self.screen_height - stopper_height
         stopper_vertices = [
@@ -136,13 +135,37 @@ class TableBuilder:
         ]
         blocks.append(Block(stopper_vertices, (100,100,100), restitution=0.2))
 
+        # Top guide (untextured)
         guide = self.generate_top_guide()
         blocks.append(guide)
 
+        # One‑way wall (textured)
         oneway = self.generate_one_way_wall()
         blocks.append(oneway)
 
-        # Lane walls
+        # Top border (textured)
+        top_border_vertices = [
+            (0, self.top_margin),
+            (0, self.top_margin + self.settings.lane_wall_thickness),
+            (self.screen_width, self.top_margin + self.settings.lane_wall_thickness),
+            (self.screen_width, self.top_margin)
+        ]
+        blocks.append(Block(top_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+
+        # Left border (textured)
+        left_border_vertices = [
+            (0, self.top_margin),
+            (0, self.screen_height),
+            (self.settings.lane_wall_thickness, self.screen_height),
+            (self.settings.lane_wall_thickness, self.top_margin)
+        ]
+        blocks.append(Block(left_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+
+        
+
+
+
+        # Lane walls (textured)
         wall_thick = self.settings.lane_wall_thickness
         lane_left = self.playfield_width
         lane_right = self.screen_width
@@ -156,7 +179,7 @@ class TableBuilder:
             (lane_left + wall_thick, lane_top + self.guide_height * 2),
             (lane_left + wall_thick, lane_bottom)
         ]
-        blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution))
+        blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
 
         # Right lane wall
         right_wall_vertices = [
@@ -165,12 +188,9 @@ class TableBuilder:
             (lane_right, lane_top),
             (lane_right, lane_bottom)
         ]
-        blocks.append(Block(right_wall_vertices, (100,100,100), restitution=self.settings.restitution))
-
-
+        blocks.append(Block(right_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
 
         return blocks
-
 
     def get_lane_center(self):
         lane_left = self.playfield_width
