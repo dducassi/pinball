@@ -17,7 +17,8 @@ class TableBuilder:
     
     def generate_bumpers(self, orb_image=None, small_orb_image=None):
         bumpers = []
-        # Wizard's Orb (center) – use orb_image
+
+        # Wizard's Orb (center)
         x = self.playfield_width / 2 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin
         bump_rad = 45
