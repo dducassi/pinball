@@ -60,7 +60,7 @@ class Settings:
         self.ong = (255, 130, 0)
         self.ppl = (130, 0, 255)
         self.gry = (100, 100, 100)
-        self.slv = (240, 240, 240)
+        self.slv = (150, 150, 150)
 
         self.init_dynamic_settings()
     
