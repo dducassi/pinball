@@ -12,15 +12,15 @@ class TableBuilder:
         self.screen_width = settings.screen_width
         self.screen_height = settings.screen_height
         self.guide_height = 30 
+        
 
-    def generate_bumpers(self):
+    def generate_bumpers(self, orb_image=None):
         bumpers = []
-
-        # Wizard's Orb!
+        # Wizard's Orb (center)
         x = self.playfield_width / 2 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin
         bump_rad = 45
-        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, orb_image))
 
         # Left lower pointer
         x = self.playfield_width / 5 + self.settings.lane_wall_thickness
@@ -28,16 +28,15 @@ class TableBuilder:
         bump_rad = 9
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
-        #Left upper pointer
+        # Left upper pointer
         x = self.playfield_width / 9 + self.settings.lane_wall_thickness
-        y = self.playfield_height / 5  + self.top_margin - self.settings.br * 6
+        y = self.playfield_height / 5 + self.top_margin - self.settings.br * 6
         bump_rad = 4.5
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
-
-        # right pointer
+        # Right pointer
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness
-        y = self.playfield_height / 5 + self.top_margin - self.settings.br *2
+        y = self.playfield_height / 5 + self.top_margin - self.settings.br * 2
         bump_rad = 7
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
 
@@ -52,6 +51,9 @@ class TableBuilder:
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 14
         bumpers.append(Bumper(x, y, self.settings.blu, bump_rad))
+
+        return bumpers
+
 
 
         return bumpers
