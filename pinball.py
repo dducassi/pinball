@@ -83,6 +83,15 @@ class Pinball:
             print("Small orb image not found, using fallback circle.")
             self.small_orb_image = None
 
+        # Load Tiny Bumper image (for tiny bumpers near main orb)
+        try:
+            tiny_bumper_img = pygame.image.load(os.path.join(base_dir, 'tiny_bumper.png')).convert_alpha()
+            self.tiny_bumper_image = tiny_bumper_img
+            print("Tiny Bumper image loaded, size:", tiny_bumper_img.get_size())
+        except:
+            print("Tiny Bumper image not found, using fallback circle.")
+            self.tiny_bumper_image = None
+
         pygame.display.set_caption('Wizard Pinball')
 
         self.notification_center = NotificationCenter()
@@ -111,7 +120,7 @@ class Pinball:
 
         # Table elements
         self.table_builder = TableBuilder(self.settings)
-        self.bumpers = self.table_builder.generate_bumpers(self.orb_image, self.small_orb_image)
+        self.bumpers = self.table_builder.generate_bumpers(self.orb_image, self.small_orb_image, self.tiny_bumper_image)
         self.blocks = self.table_builder.generate_blocks()
 
         # Physics engine
@@ -316,27 +325,23 @@ class Pinball:
 
     # Check for Orb hits:
     def on_bumper_hit(self, bumper):
-        """Handle bumper hit: set a temporary message based on bumper size and color."""
         if self.state != GameState.PLAYING:
             return
-        if bumper.radius > 20:  # large bumper
-            if bumper.color == (0,100,255):
+        if bumper.radius > 20:
+            print("Large bumper color:", bumper.color)   # debug
+            if bumper.color == self.settings.blu:
                 msg = "ORB OF POWER!"
-            elif bumper.color == (255, 30, 0):
+            elif bumper.color == self.settings.red:
                 msg = "FIREBALL!"
-            elif bumper.color == (255,255,255):
+            elif bumper.color == self.settings.wht:
                 msg = "BALL LIGHTNING!"
-                
-             
-
+            else:
+                msg = ""
         else:
             msg = ""
         if msg:
             self.temp_message = msg
             self.temp_message_time = pygame.time.get_ticks()
-           
-                    
-    
 
             
                 
@@ -371,10 +376,10 @@ class Pinball:
 
         # Score and lives
         try:
-            f = pygame.font.Font(font_path, 12)
+            f = pygame.font.Font(font_path, 11)
         except:
             f = pygame.font.Font(None, 24)
-        score_text = f.render(f'Score: {self.score_manager.score}', True, self.settings.wht)
+        score_text = f.render(f'Score: {self.score_manager.score:,}', True, self.settings.wht)
         self.screen.blit(score_text, (12, 65))
         lives_text = f.render(f'Balls: {self.lives}', True, self.settings.wht)
         self.screen.blit(lives_text, (self.settings.screen_width - 110, 65))
