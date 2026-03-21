@@ -123,10 +123,17 @@ class TableBuilder:
         ]
         blocks.append(Block(left_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
 
+        # Left lower border
+        left_lower_vertices = [
+            (2/7 * self.playfield_width - 5, self.screen_height),
+            (2/7 * self.playfield_width - 5, self.screen_height - 2/14 * self.playfield_height),
+            (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+            (2/7 * self.playfield_width, self.screen_height),
+        ]
+        blocks.append(Block(left_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
+
+
        
-
-
-
         # Right block (main) – no texture
         right_vertices = [
             (self.playfield_width, self.screen_height - 4/14 * self.playfield_height),
@@ -136,6 +143,7 @@ class TableBuilder:
         blocks.append(Block(right_vertices, self.settings.slv, self.settings.restitution, self.tri_texture))
 
 
+
         # Right lower block
         #(self.playfield_width - 2/7 * self.playfield_width, self.screen_height)
         right_lower_vertices = [
@@ -143,6 +151,15 @@ class TableBuilder:
             (self.playfield_width, self.screen_height - 2/14 * self.playfield_height),
             (self.playfield_width - 2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
             (self.playfield_width - 2/7 * self.playfield_width, self.screen_height),
+        ]
+        blocks.append(Block(right_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
+
+        # Right lower border
+        right_lower_vertices = [
+            ((self.playfield_width - 2/7 * self.playfield_width) + 5, self.screen_height),
+            ((self.playfield_width - 2/7 * self.playfield_width) + 5, self.screen_height - 2/14 * self.playfield_height),
+            ((self.playfield_width - 2/7 * self.playfield_width), self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+            ((self.playfield_width - 2/7 * self.playfield_width), self.screen_height),
         ]
         blocks.append(Block(right_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
         
