@@ -20,37 +20,37 @@ class TableBuilder:
         x = self.playfield_width / 2 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin
         bump_rad = 45
-        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
 
         # Left lower pointer (tiny)
         x = self.playfield_width / 5 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin + self.settings.br * 2
         bump_rad = 9
-        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, tiny_bumper_image))
 
         # Left upper pointer (tiny)
         x = self.playfield_width / 9 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 6
         bump_rad = 4.5
-        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, tiny_bumper_image))
 
         # Right pointer (tiny)
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 2
         bump_rad = 7
-        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, tiny_bumper_image))
 
         # Lower left bumper (small orb)
         x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 14
-        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, small_orb_image))
 
         # Lower right bumper (small orb)
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 14
-        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, small_orb_image))
 
         return bumpers
     
@@ -71,6 +71,7 @@ class TableBuilder:
         """Create a thin vertical wall just left of the lane exit to prevent re‑entry."""
         wall_thick = self.settings.lane_wall_thickness
         wall_x = self.playfield_width + 1
+        # Plunger Lane Exit
         thickness = 3
         vertices = [
             (wall_x, self.top_margin),
@@ -78,7 +79,19 @@ class TableBuilder:
             (wall_x - thickness, self.top_margin + self.guide_height * 2),
             (wall_x - thickness, self.top_margin)
         ]
-        return OneWayBlock(vertices, (100,100,100), restitution=self.settings.restitution, direction='left', image=self.block_texture)
+        
+        return(OneWayBlock(vertices, (100,100,100), restitution=self.settings.restitution, direction='left', image=self.block_texture))
+        
+    def generate_bottom_wall(self):
+        # Bottom wall
+        vertices = [
+            (0, self.screen_height - 5),
+            (0, self.screen_height),
+            (self.screen_width, self.screen_height),
+            (self.screen_width, self.screen_height -5)
+        ]
+        return(OneWayBlock(vertices, (100,100,100), restitution=self.settings.restitution, direction='down', image=self.block_texture))
+
     
     def generate_blocks(self):
         blocks = []
@@ -142,8 +155,10 @@ class TableBuilder:
         # One‑way wall (textured)
         oneway = self.generate_one_way_wall()
         blocks.append(oneway)
+        bottom_wall = self.generate_bottom_wall()
+        blocks.append(bottom_wall)
 
-        # Top border (textured)
+        # Top playing field border (textured)
         top_border_vertices = [
             (0, self.top_margin),
             (0, self.top_margin + self.settings.lane_wall_thickness),
@@ -152,15 +167,32 @@ class TableBuilder:
         ]
         blocks.append(Block(top_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
 
-        # Left border (textured)
+      # Top bar (thin decorative strip at very top)
+        top_bar_vertices = [
+            (0, 0),
+            (0, 5),                             # height 5 pixels
+            (self.screen_width, 5),
+            (self.screen_width, 0)
+        ]
+        blocks.append(Block(top_bar_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+
+        # Left border (full height, from top to bottom)
         left_border_vertices = [
-            (0, self.top_margin),
+            (0, 0),
             (0, self.screen_height),
             (self.settings.lane_wall_thickness, self.screen_height),
-            (self.settings.lane_wall_thickness, self.top_margin)
+            (self.settings.lane_wall_thickness, 0)
         ]
         blocks.append(Block(left_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
 
+        # Right border (full height)
+        right_border_vertices = [
+            (self.screen_width - self.settings.lane_wall_thickness, 0),
+            (self.screen_width - self.settings.lane_wall_thickness, self.screen_height),
+            (self.screen_width, self.screen_height),
+            (self.screen_width, 0)
+        ]
+        blocks.append(Block(right_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
         
 
 
@@ -181,14 +213,7 @@ class TableBuilder:
         ]
         blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
 
-        # Right lane wall
-        right_wall_vertices = [
-            (lane_right - wall_thick, lane_bottom),
-            (lane_right - wall_thick, lane_top),
-            (lane_right, lane_top),
-            (lane_right, lane_bottom)
-        ]
-        blocks.append(Block(right_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+        
 
         return blocks
 
