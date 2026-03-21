@@ -168,8 +168,13 @@ class Pinball:
             self.bg = pygame.transform.scale(self.bg,
                                              (self.settings.playfield_width,
                                               self.settings.playfield_height))
+            self.lane_bg =  pygame.image.load(os.path.join(base_dir, 'block_texture.png')).convert()
+            self.lane_bg = pygame.transform.scale(self.lane_bg,
+                                             (self.settings.playfield_width,
+                                              self.settings.playfield_height))
         else:
             self.bg = None
+            self.lane_bg = None
 
         self.ball_save_active = False
         self.ball_save_start_time = 0
@@ -359,7 +364,10 @@ class Pinball:
         self.screen.fill((0, 0, 0))
         # Playfield background
         if self.bg:
-            self.screen.blit(self.bg, (self.settings.lane_wall_thickness - self.settings.lane_wall_thickness, self.playfield_y))
+            self.screen.blit(self.bg, (0, self.playfield_y))
+        if self.lane_bg:
+            self.screen.blit(self.lane_bg, (self.settings.playfield_width, self.playfield_y))
+
 
         
 
