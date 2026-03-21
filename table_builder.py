@@ -1,6 +1,7 @@
 from bumpers import Bumper
 from blocks import Block
 from one_way_block import OneWayBlock 
+import math
 
 class TableBuilder:
     def __init__(self, settings, block_texture=None, tri_texture=None, tri_flipped=None, tri_mirrored=None, pattern=False):
@@ -28,25 +29,25 @@ class TableBuilder:
         # Left lower pointer (tiny)
         x = self.playfield_width / 5 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin + self.settings.br * 5
-        bump_rad = 10
+        bump_rad = 11
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
 
         # Left upper pointer (tiny)
         x = self.playfield_width / 9 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 6
-        bump_rad = 6
+        bump_rad = 7
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
 
         # Right upper pointer (tiny)
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness + self.settings.br
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 3
-        bump_rad = 8
+        bump_rad = 9
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
 
         # Right lower pointer (tiny)
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness - 1 * self.settings.br
         y = self.playfield_height / 5 + self.top_margin +  self.settings.br * 7
-        bump_rad = 12
+        bump_rad = 13
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
 
 
@@ -54,30 +55,82 @@ class TableBuilder:
         # Lower left bumper (small orb)
         x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 14
+        bump_rad = 16
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
 
         # Lower right bumper (small orb)
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 14
+        bump_rad = 16
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+
+        # Wizard's chest
+        x = self.playfield_width // 2
+        y = self.playfield_height / 2 + self.top_margin - 35
+        bump_rad = 5.5
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+
+        # Wizard left
+        x = self.playfield_width // 2 - 25
+        y = self.playfield_height / 2 + self.top_margin - 85
+        bump_rad = 5.5
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+
+        # Wizard rigt
+        x = self.playfield_width // 2 + 25
+        y = self.playfield_height / 2 + self.top_margin - 85
+        bump_rad = 5.5
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+
 
         return bumpers
     
     def generate_top_guide(self):
-        """Return a triangular guide at the top of the plunger lane to deflect ball left."""
+        """Return a concave guide at the top of the plunger lane, rotated 90° counter‑clockwise."""
         wall_thick = self.settings.lane_wall_thickness
-        lane_left = self.playfield_width - wall_thick          # interior left edge
-        lane_right = self.screen_width - wall_thick            # interior right edge
-        guide_height = 40                                      # how far down the guide extends
-        vertices = [
-            (lane_left, self.top_margin + 5),                      # top left
-            (lane_right, self.top_margin + 5),                     # top right
-            (lane_right, self.top_margin +5 + guide_height)       # bottom right
-        ]
-        return Block(vertices, (150,150,150), restitution=self.settings.restitution, image = self.tri_mirrored)
+        lane_left = self.playfield_width - wall_thick
+        lane_right = self.screen_width - wall_thick
+        guide_height = 40
+        y_top = self.top_margin
+        y_bottom = y_top + guide_height
 
+        vertices = []
+
+        # Top edge (left to right)
+        vertices.append((lane_left, y_top))
+        vertices.append((lane_right, y_top))
+
+        # Generate points along the concave curve (top‑right to bottom‑left)
+        steps = 12
+        for i in range(1, steps + 1):
+            t = i / steps
+            x = lane_right + (lane_left - lane_right) * t
+            y = y_top + (y_bottom - y_top) * t
+            offset = 15 * (1 - (2*t - 1)**2)
+            x -= offset
+            vertices.append((x, y))
+
+        # Rotate the entire polygon 90° counter‑clockwise about its center
+        xs = [v[0] for v in vertices]
+        ys = [v[1] for v in vertices]
+        cx = (min(xs) + max(xs)) / 2
+        cy = (min(ys) + max(ys)) / 2
+
+        rotated_vertices = []
+        for (x, y) in vertices:
+            x1 = x - cx
+            y1 = y - cy
+            # Rotate 90° counter‑clockwise: (x1, y1) -> (-y1, x1)
+            x2 = -y1
+            y2 = x1
+            x_new = x2 + cx
+            y_new = y2 + cy
+            rotated_vertices.append((x_new, y_new))
+
+        return Block(rotated_vertices, (200, 200, 200), restitution=self.settings.restitution, pattern=True)
+    
+    
+    
     def generate_one_way_wall(self):
         """Create a thin vertical wall just left of the lane exit to prevent re‑entry."""
         wall_thick = self.settings.lane_wall_thickness
@@ -204,6 +257,10 @@ class TableBuilder:
         guide = self.generate_top_guide()
         blocks.append(guide)
 
+         # Left top guide
+        #left_guide = self.generate_top_guide_left()
+        #blocks.append(left_guide)
+
         # One‑way wall (textured)
         oneway = self.generate_one_way_wall()
         blocks.append(oneway)
@@ -290,3 +347,5 @@ class TableBuilder:
 
     def get_plunger_base_y(self):
         return self.screen_height - 10
+    
+    
