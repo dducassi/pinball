@@ -239,6 +239,15 @@ class TableBuilder:
         ]
         blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
 
+        # Left leftlane wall (shortened to allow exit)
+        left_wall_vertices = [
+            (lane_left, lane_bottom),
+            (lane_left, lane_top + self.guide_height * 2),
+            (lane_left + wall_thick, lane_top + self.guide_height * 2),
+            (lane_left + wall_thick, lane_bottom)
+        ]
+        blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+
         
 
         return blocks
