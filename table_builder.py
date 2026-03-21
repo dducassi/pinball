@@ -19,7 +19,7 @@ class TableBuilder:
         # Wizard's Orb (center)
         x = self.playfield_width / 2 
         y = self.playfield_height / 6 + self.top_margin
-        bump_rad = 60
+        bump_rad = 55
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
 
         # Left lower pointer (tiny)
@@ -97,21 +97,45 @@ class TableBuilder:
         blocks = []
         # Left block (main) – no texture
         left_vertices = [
-            (0, self.screen_height),
-            (0, self.top_margin + self.playfield_height - 4/14 * self.playfield_height),
+            (0, self.screen_height - 4/14 * self.playfield_height),
+            (0, self.screen_height - 2/14 * self.playfield_height),
             (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
-            (2/7 * self.playfield_width, self.screen_height)
+            
         ]
         blocks.append(Block(left_vertices, self.settings.slv, self.settings.restitution))
 
+        # Left lower block
+        left_lower_vertices = [
+            (0, self.screen_height),
+            (0, self.screen_height - 2/14 * self.playfield_height),
+            (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+            (2/7 * self.playfield_width, self.screen_height),
+        ]
+        blocks.append(Block(left_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
+
+       
+
+
+
         # Right block (main) – no texture
         right_vertices = [
-            (self.playfield_width, self.screen_height),
-            (self.playfield_width, self.top_margin + self.playfield_height - 4/14 * self.playfield_height),
-            (self.playfield_width - 2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
-            (self.playfield_width - 2/7 * self.playfield_width, self.screen_height)
+            (self.playfield_width, self.screen_height - 4/14 * self.playfield_height),
+            (self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+            (self.playfield_width - 2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height)
         ]
         blocks.append(Block(right_vertices, self.settings.slv, self.settings.restitution))
+
+
+        # Right lower block
+        #(self.playfield_width - 2/7 * self.playfield_width, self.screen_height)
+        right_lower_vertices = [
+            (self.playfield_width, self.screen_height),
+            (self.playfield_width, self.screen_height - 2/14 * self.playfield_height),
+            (self.playfield_width - 2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+            (self.playfield_width - 2/7 * self.playfield_width, self.screen_height),
+        ]
+        blocks.append(Block(right_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
+        
 
         # Funnel blocks above left and right main blocks – no texture
         funnel_height = 50
