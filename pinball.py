@@ -144,6 +144,10 @@ class Pinball:
         self.notification_center = NotificationCenter()
         self.score_manager = ScoreManager(self.notification_center, self.settings)
 
+        # High score
+        self.high_score = self.load_high_score()
+        self.notification_center.add_observer('score_changed', self.on_score_changed)
+
         
         # Observe bumper hits
         self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
@@ -207,6 +211,25 @@ class Pinball:
         self.ball_save_active = False
         self.ball_save_start_time = 0
         self.ball_save_duration = 10000  # 10 seconds in milliseconds  
+
+    def load_high_score(self):
+        try:
+            with open('highscore.txt', 'r') as f:
+                return int(f.read().strip())
+        except:
+            return 0
+
+    def save_high_score(self):
+        try:
+            with open('highscore.txt', 'w') as f:
+                f.write(str(self.high_score))
+        except:
+            print("Could not save high score.")
+
+    def on_score_changed(self, score):
+        if score > self.high_score:
+            self.high_score = score
+            self.save_high_score()
 
     # Drawing helpers
     def draw_bumpers(self):
@@ -395,6 +418,8 @@ class Pinball:
             self.screen.blit(self.bg, (0, self.playfield_y))
         if self.lane_bg:
             self.screen.blit(self.lane_bg, (self.settings.playfield_width, self.playfield_y))
+       
+
 
 
         
@@ -405,9 +430,7 @@ class Pinball:
         self.b.draw_ball()
         self.draw_bumpers()
         self.plunger.draw(self.screen)
-
-        if not self.test_mode:
-            self.draw_blocks()
+        self.draw_blocks()
 
         # Title
         try:
@@ -423,11 +446,18 @@ class Pinball:
             f = pygame.font.Font(font_path, 11)
         except:
             f = pygame.font.Font(None, 24)
-        score_text = f.render(f'Score: {self.score_manager.score:,}', True, self.settings.wht)
+        score_text = f.render(f'SCORE: {self.score_manager.score:,}', True, self.settings.wht)
         self.screen.blit(score_text, (12, 65))
-        lives_text = f.render(f'Balls: {self.lives}', True, self.settings.wht)
+        lives_text = f.render(f'BALLS: {self.lives}', True, self.settings.wht)
         self.screen.blit(lives_text, (self.settings.screen_width - 110, 65))
 
+        # High score (right side, below score)
+        try:
+            high_font = pygame.font.Font(font_path, 8)   # smaller font
+        except:
+            high_font = pygame.font.Font(None, 24)      # fallback
+        high_text = high_font.render(f'HIGH: {self.high_score:,}', True, self.settings.wht)
+        self.screen.blit(high_text, (self.settings.screen_width - 110, 90))
         # Context messages
         self._draw_messages()
 
