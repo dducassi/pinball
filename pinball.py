@@ -359,7 +359,7 @@ class Pinball:
         self.screen.fill((0, 0, 0))
         # Playfield background
         if self.bg:
-            self.screen.blit(self.bg, (self.settings.lane_wall_thickness, self.playfield_y))
+            self.screen.blit(self.bg, (self.settings.lane_wall_thickness - self.settings.lane_wall_thickness, self.playfield_y))
 
         
 
@@ -378,7 +378,7 @@ class Pinball:
             title_font = pygame.font.Font(font_path, 12)
         except:
             title_font = pygame.font.Font(None, 36)
-        title_text = title_font.render("WIZARD'S TOWER", True, self.settings.wht)
+        title_text = title_font.render("THE WIZARD'S TOWER", True, self.settings.wht)
         title_rect = title_text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 5))
         self.screen.blit(title_text, title_rect)
 
