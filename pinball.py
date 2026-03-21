@@ -111,6 +111,34 @@ class Pinball:
             print("Block texture not found, using solid colors.")
             self.block_texture = None
 
+        # Load triangle block texture
+        try:
+            tri_texture = pygame.image.load(os.path.join(base_dir, 'tri_image.png')).convert_alpha()
+            tri_flipped = pygame.transform.flip(tri_texture, True, False)   # horizontal flip
+            tri_mirrored = pygame.transform.flip(tri_texture, False, True)   # vertical flip
+            self.tri_texture = tri_texture
+            self.tri_flipped = tri_flipped
+            self.tri_mirrored = tri_mirrored
+            print("Triangle texture loaded")
+        except:
+            print("Triangle texture not found, using solid colors.")
+            self.tri_texture = None
+            self.tri_flipped = None
+            self.tri_mirrored = None
+
+        
+        # Load flipper image
+        try:
+            flipper_img = pygame.image.load(os.path.join(base_dir, 'flipper.png')).convert_alpha()
+            self.flipper_image = flipper_img
+            print("Flipper image loaded")
+        except:
+            print("Flipper image not found, using fallback drawing.")
+            self.flipper_image = None
+
+        
+
+
         pygame.display.set_caption('Wizard Pinball')
 
         self.notification_center = NotificationCenter()
@@ -137,7 +165,7 @@ class Pinball:
         self.flippers = [self.fl, self.fr]
 
         # Table elements
-        self.table_builder = TableBuilder(self.settings, self.block_texture)
+        self.table_builder = TableBuilder(self.settings, self.block_texture, self.tri_texture, self.tri_flipped, self.tri_mirrored)
         self.bumpers = self.table_builder.generate_bumpers(self.orb_image, self.small_orb_image, self.tiny_bumper_image)
         self.blocks = self.table_builder.generate_blocks()
 
