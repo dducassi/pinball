@@ -37,5 +37,5 @@ class Plunger:
         pull_height = self.current_pull / self.max_pull * 50
         start = (self.x, self.y)
         end = (self.x, self.y - pull_height)
-        pygame.draw.line(screen, color, start, end, 5)
-        pygame.draw.circle(screen, color, (int(end[0]), int(end[1])), 3)
+        #pygame.draw.line(screen, color, start, end, 5)
+        #pygame.draw.circle(screen, color, (int(end[0]), int(end[1])), 3)
