@@ -17,40 +17,40 @@ class TableBuilder:
     def generate_bumpers(self, orb_image=None, small_orb_image=None, tiny_bumper_image=None):
         bumpers = []
         # Wizard's Orb (center)
-        x = self.playfield_width / 2 + self.settings.lane_wall_thickness
-        y = self.playfield_height / 5 + self.top_margin
-        bump_rad = 45
+        x = self.playfield_width / 2 
+        y = self.playfield_height / 6 + self.top_margin
+        bump_rad = 60
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
 
         # Left lower pointer (tiny)
         x = self.playfield_width / 5 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin + self.settings.br * 2
         bump_rad = 9
-        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
 
         # Left upper pointer (tiny)
         x = self.playfield_width / 9 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 6
         bump_rad = 4.5
-        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
 
         # Right pointer (tiny)
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 2
         bump_rad = 7
-        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
 
         # Lower left bumper (small orb)
         x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 14
-        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
 
         # Lower right bumper (small orb)
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 14
-        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
 
         return bumpers
     
@@ -61,16 +61,16 @@ class TableBuilder:
         lane_right = self.screen_width - wall_thick            # interior right edge
         guide_height = 40                                      # how far down the guide extends
         vertices = [
-            (lane_left, self.top_margin),                      # top left
-            (lane_right, self.top_margin),                     # top right
-            (lane_right, self.top_margin + guide_height)       # bottom right
+            (lane_left, self.top_margin + 5),                      # top left
+            (lane_right, self.top_margin + 5),                     # top right
+            (lane_right, self.top_margin +5 + guide_height)       # bottom right
         ]
         return Block(vertices, (150,150,150), restitution=self.settings.restitution)
 
     def generate_one_way_wall(self):
         """Create a thin vertical wall just left of the lane exit to prevent re‑entry."""
         wall_thick = self.settings.lane_wall_thickness
-        wall_x = self.playfield_width + 1
+        wall_x = self.playfield_width - 5
         # Plunger Lane Exit
         thickness = 3
         vertices = [
@@ -86,8 +86,8 @@ class TableBuilder:
         # Bottom wall
         vertices = [
             (0, self.screen_height - 5),
-            (0, self.screen_height),
             (self.screen_width, self.screen_height),
+            (0, self.screen_height),
             (self.screen_width, self.screen_height -5)
         ]
         return(OneWayBlock(vertices, (100,100,100), restitution=self.settings.restitution, direction='down', image=self.block_texture))
@@ -137,7 +137,7 @@ class TableBuilder:
         ]
         blocks.append(Block(right_funnel_vertices, self.settings.slv, restitution=self.settings.restitution))
 
-        # Bottom stopper block (untextured)
+        # Bottom stopper block
         stopper_height = 10
         stopper_top = self.screen_height - stopper_height
         stopper_vertices = [
@@ -146,7 +146,7 @@ class TableBuilder:
             (self.screen_width, stopper_top),
             (self.screen_width, self.screen_height)
         ]
-        blocks.append(Block(stopper_vertices, (100,100,100), restitution=0.2))
+        blocks.append(Block(stopper_vertices, (100,100,100), restitution=0.2, image = self.block_texture))
 
         # Top guide (untextured)
         guide = self.generate_top_guide()
@@ -154,6 +154,8 @@ class TableBuilder:
 
         # One‑way wall (textured)
         oneway = self.generate_one_way_wall()
+
+        # Bottom wall (textured)
         blocks.append(oneway)
         bottom_wall = self.generate_bottom_wall()
         blocks.append(bottom_wall)
