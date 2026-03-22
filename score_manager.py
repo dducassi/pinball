@@ -24,7 +24,7 @@ class ScoreManager:
             self.score += self.settings.pph
 
         # Cycle bumper color
-        if bumper.radius > 5.5:
+        if bumper.radius > 5:
             if bumper.color == self.settings.red:
                 bumper.color = self.settings.blu
             elif bumper.color == self.settings.blu:
