@@ -1,5 +1,6 @@
 import pygame
 import os
+import winsound
 
 class SoundManager:
     def __init__(self, notification_center, base_dir):
@@ -30,6 +31,10 @@ class SoundManager:
             self.save_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'save.wav'))
         except:
             self.save_sound = None
+        try:
+            self.block_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'block_sound.wav'))
+        except:
+            self.block_sound = None
 
     def _register_observers(self):
         self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
@@ -37,23 +42,47 @@ class SoundManager:
         self.notification_center.add_observer('ball_launch', self.on_ball_launch)
         self.notification_center.add_observer('ball_lost', self.on_ball_lost)
         self.notification_center.add_observer('ball_saved', self.on_ball_saved)
+        self.notification_center.add_observer('block_hit', self.on_block_hit)
 
     def on_bumper_hit(self, bumper):
         if self.bumper_sound:
             self.bumper_sound.play()
+        else:
+            pass
 
     def on_flipper_click(self, flipper):
         if self.flipper_sound:
             self.flipper_sound.play()
+        else:
+            #winsound.Beep(800, 50)
+            pass
 
     def on_ball_launch(self, data):
         if self.launch_sound:
             self.launch_sound.play()
+        else:
+            winsound.Beep(400, 50)
 
     def on_ball_lost(self, data):
         if self.ball_lost_sound:
             self.ball_lost_sound.play()
+        else:
+            winsound.Beep(440, 100)
+            winsound.Beep(440, 100)
+            winsound.Beep(440, 100)
 
     def on_ball_saved(self, data):
         if self.save_sound:
             self.save_sound.play()
+        else:
+            winsound.Beep(440, 100)
+            winsound.Beep(440, 100)
+            winsound.Beep(700, 100)
+
+    def on_block_hit(self, block):
+        if self.block_sound:
+            self.block_sound.play()
+        else:
+            # optional fallback
+            print("Block hit sound failed.")
+            pass
