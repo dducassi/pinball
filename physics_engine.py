@@ -177,7 +177,9 @@ class PhysicsEngine:
                     ball_dy += (vn_target - current_vn) * ny
 
                 # Break after handling a hit
-                print(f"[Swept CCD] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
+                #print(f"[Swept CCD] Flipper collision at ({ball_x:.2f},{ball_y:.2f}), velocity ({ball_dx:.2f},{ball_dy:.2f})")
+
+                ball.resting = False
 
                 
                 break
@@ -192,7 +194,13 @@ class PhysicsEngine:
             )
             if hit:
                 ball_x, ball_y, ball_dx, ball_dy = new_x, new_y, new_dx, new_dy
-               
+                ball.resting = False
+
+                # Post block hit notification
+                if abs(ball_dx) > 0.6 or abs(ball_dy) > 0.6:
+                    if not ball.resting:
+                        if not ball.trapped:
+                            self.notification_center.post_notification('block_hit', block)
 
 
         # --- Bumpers collisions ---
@@ -254,7 +262,7 @@ class PhysicsEngine:
 
 
         # --- Trapped detection (ball between flipper and block) ---
-        TRAP_SPEED_THRESH = 0.1
+        TRAP_SPEED_THRESH = 0.05
         TRAP_DIST_EPSILON = 1.0  # extra allowance beyond ball_radius
 
         if not ball.trapped and math.hypot(ball_dx, ball_dy) < TRAP_SPEED_THRESH:
@@ -303,7 +311,59 @@ class PhysicsEngine:
                     ball.dx = 0
                     ball.dy = 0
 
-        
+                # --- Resting detection (ball at rest on any surface) ---
+            REST_SPEED_THRESH = 0.1
+            if not ball.resting and math.hypot(ball_dx, ball_dy) < REST_SPEED_THRESH:
+                # Check if ball is near any flipper
+                near_surface = False
+                for f in self.flippers:
+                    # Simplified distance to flipper
+                    pivot_x, pivot_y = f.pivot
+                    angle = f.angle
+                    length = f.length
+                    width = f.width
+                    dx = ball_x - pivot_x
+                    dy = ball_y - pivot_y
+                    cos_a = math.cos(angle)
+                    sin_a = math.sin(angle)
+                    local_x = dx * cos_a + dy * sin_a
+                    local_y = -dx * sin_a + dy * cos_a
+                    rect_left = min(0, length)
+                    rect_right = max(0, length)
+                    rect_top = -width / 2
+                    rect_bottom = width / 2
+                    closest_x = max(rect_left, min(local_x, rect_right))
+                    closest_y = max(rect_top, min(local_y, rect_bottom))
+                    dist = math.hypot(local_x - closest_x, local_y - closest_y)
+                    if dist < ball_radius + 5:   # 5 pixel tolerance
+                        near_surface = True
+                        break
+                if not near_surface:
+                    # Check blocks
+                    for block in self.blocks:
+                        min_dist = float('inf')
+                        for (x1, y1, x2, y2) in block.edges:
+                            cx, cy = block._closest_point_on_segment(ball_x, ball_y, x1, y1, x2, y2)
+                            dist = math.hypot(ball_x - cx, ball_y - cy)
+                            if dist < min_dist:
+                                min_dist = dist
+                        if min_dist < ball_radius + 5:
+                            near_surface = True
+                            break
+                    if not near_surface:
+                        # Check left wall (x=0)
+                        if ball_x - ball_radius < 5:
+                            near_surface = True
+                        # Check top wall (y=top_margin)
+                        if ball_y - ball_radius < self.settings.top_margin + 5:
+                            near_surface = True
+
+                if near_surface:
+                    ball.resting = True
+                    ball_dx = 0
+                    ball_dy = 0
+
+            
 
         # Original ball.move() call (gravity, friction, walls)
         ball.move()
