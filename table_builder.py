@@ -1,6 +1,7 @@
 from bumpers import Bumper
 from blocks import Block
 from one_way_block import OneWayBlock 
+from light import Light
 import math
 
 class TableBuilder:
@@ -17,74 +18,85 @@ class TableBuilder:
         self.screen_width = settings.screen_width
         self.screen_height = settings.screen_height
         self.guide_height = 30 
-    
-    def generate_bumpers(self, orb_image=None, small_orb_image=None, tiny_bumper_image=None):
+        self.light = None
+
+   
+    def generate_bumpers(self, orb_image=None, small_orb_image=None, tiny_bumper_image=None, light_image=None):
         bumpers = []
+        lights = []
         # Wizard's Orb (center)
-        x = self.playfield_width / 2 
+        x = self.playfield_width / 2
         y = self.playfield_height / 6 + self.top_margin
         bump_rad = 55
+        color = self.settings.wht
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
+        lights.append(Light(x, y, bump_rad + 2, color, light_image))
 
         # Left lower pointer (tiny)
         x = self.playfield_width / 5 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin + self.settings.br * 5
         bump_rad = 11
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
+        lights.append(Light(x, y, 13, color, light_image))
 
         # Left upper pointer (tiny)
         x = self.playfield_width / 9 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 6
         bump_rad = 7
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
+        lights.append(Light(x, y, 9, color, light_image))
 
         # Right upper pointer (tiny)
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness + self.settings.br
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 3
         bump_rad = 9
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
+        lights.append(Light(x, y, 11, color, light_image))
 
         # Right lower pointer (tiny)
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness - 1 * self.settings.br
         y = self.playfield_height / 5 + self.top_margin +  self.settings.br * 7
         bump_rad = 13
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
-
-
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
+        lights.append(Light(x, y, 15, color, light_image))
 
         # Lower left bumper (small orb)
         x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 16
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        lights.append(Light(x, y, 18, color, light_image))
 
         # Lower right bumper (small orb)
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 16
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        lights.append(Light(x, y, 18, color, light_image))
 
         # Wizard's chest
         x = self.playfield_width // 2
         y = self.playfield_height / 2 + self.top_margin - 30
         bump_rad = 8
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        lights.append(Light(x, y, 10.5, color, light_image))
 
         # Wizard left
         x = self.playfield_width // 2 - 25
         y = self.playfield_height / 2 + self.top_margin - 85
         bump_rad = 5.5
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        lights.append(Light(x, y, 8, color, light_image))
 
         # Wizard right
         x = self.playfield_width // 2 + 25
         y = self.playfield_height / 2 + self.top_margin - 85
         bump_rad = 5.5
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        lights.append(Light(x, y, 8, color, light_image))
 
+        return bumpers, lights
 
-        return bumpers
-    
     def generate_top_guide(self):
         """Return a concave guide at the top of the plunger lane, rotated 90° counter‑clockwise."""
         wall_thick = self.settings.lane_wall_thickness
@@ -101,7 +113,7 @@ class TableBuilder:
         vertices.append((lane_right, y_top))
 
         # Generate points along the concave curve (top‑right to bottom‑left)
-        steps = 12
+        steps = 24
         for i in range(1, steps + 1):
             t = i / steps
             x = lane_right + (lane_left - lane_right) * t
@@ -127,7 +139,7 @@ class TableBuilder:
             y_new = y2 + cy
             rotated_vertices.append((x_new, y_new))
 
-        return Block(rotated_vertices, (200, 200, 200), restitution=self.settings.restitution, pattern=True)
+        return Block(rotated_vertices, (220, 220, 220), restitution=self.settings.restitution, pattern=True)
     
     
     
@@ -337,10 +349,10 @@ class TableBuilder:
 
         # Left Lane wall cap
         left_wall_vertices = [
-            (lane_left, lane_top + self.guide_height * 2),
+            (lane_left - 7, lane_top + self.guide_height * 2),
             (lane_left + 7, lane_top + self.guide_height * 2),
             (lane_left + 7, lane_top + self.guide_height * 2 + 5),
-            (lane_left, lane_top + self.guide_height * 2 + 5),
+            (lane_left - 7, lane_top + self.guide_height * 2 + 5),
         ]
         blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
 
