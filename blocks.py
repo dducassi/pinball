@@ -144,38 +144,28 @@ class Block:
         else:
             pygame.draw.polygon(screen, self.c, self.vertices)
 
-        # Draw pattern if requested (two horizontal lines)
+                # Draw bevel effect for sloping edges (funnel blocks)
         if self.pattern and len(self.vertices) == 4:
-            # Assume vertices are in order: A (top-left), B (top-right), C (bottom-right), D (bottom-left)
-            # Identify sloping edges: B->C and D->A (edges where x changes)
             edges = [(self.vertices[i], self.vertices[(i+1)%4]) for i in range(4)]
             for (p1, p2) in edges:
                 # Check if edge is sloping (x coordinates differ)
                 if abs(p1[0] - p2[0]) > 5:
-                    # Compute inward offset direction
-                    # Edge direction vector
                     dx = p2[0] - p1[0]
                     dy = p2[1] - p1[1]
                     # Perpendicular vector (rotate 90 deg)
                     perp_x = -dy
                     perp_y = dx
-                    # Normalize (approx)
                     length = math.hypot(perp_x, perp_y)
                     if length > 0:
                         perp_x /= length
                         perp_y /= length
-                    # Inward direction: for top edge (B->C), we want to go "down" (positive y) into the funnel.
-                    # For bottom edge (D->A), we want to go "up" (negative y). We'll determine based on which edge.
-                    # A simple heuristic: if the edge's y increases (p2.y > p1.y), it's a downward sloping edge (top edge).
-                    # Then inward is (perp_x, perp_y) if that points into the polygon? We'll just use a fixed offset of 1.
-                    offset = 1
-                    # Choose color: white for top edge, black for bottom edge
-                    if p2[1] > p1[1]:  # downward sloping (top edge)
-                        color = (210,210,210)  # light
-                    else:               # upward sloping (bottom edge)
-                        color = (40,40,40)       # shaded
-                    # Draw a thick line by drawing multiple lines parallel
-                    for d in range(-2, 3):   # 5 lines for thickness 5
+                    # Flip colors: top edge (downward) gets dark, bottom edge (upward) gets light
+                    if p2[1] > p1[1]:   # downward sloping (top edge) -> shadow
+                        color = (30, 30, 30)        # dark gray
+                    else:                # upward sloping (bottom edge) -> highlight
+                        color = (210, 210, 210)    # light gray
+                    # Draw a thick line (5 lines) to simulate bevel
+                    for d in range(-2, 3):
                         ox = -perp_x * d * 0.5
                         oy = -perp_y * d * 0.5
                         start = (p1[0] + ox, p1[1] + oy)
