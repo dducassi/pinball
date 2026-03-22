@@ -153,7 +153,8 @@ class Pinball:
         self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
 
         # Ball
-        self.lives = 4
+        self.lives = 3
+        
 
         # Flippers
         self.fl = Flipper(
@@ -200,7 +201,7 @@ class Pinball:
             self.bg = pygame.transform.scale(self.bg,
                                              (self.settings.playfield_width,
                                               self.settings.playfield_height))
-            self.lane_bg =  pygame.image.load(os.path.join(base_dir, 'block_texture.png')).convert()
+            self.lane_bg =  pygame.image.load(os.path.join(base_dir, 'lane_bg.png')).convert()
             self.lane_bg = pygame.transform.scale(self.lane_bg,
                                              (self.settings.playfield_width,
                                               self.settings.playfield_height))
@@ -399,10 +400,9 @@ class Pinball:
                 msg = "FIREBALL!"
             elif bumper.color == self.settings.wht:
                 msg = "BALL LIGHTNING!"
-            else:
-                msg = ""
+                
         else:
-            msg = ""
+            msg = random.choice(["BOOM!", "HISS!", "POP!", "ZAP!"])
         if msg:
             self.temp_message = msg
             self.temp_message_time = pygame.time.get_ticks()
