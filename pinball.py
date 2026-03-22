@@ -18,6 +18,11 @@ from table_builder import TableBuilder
 from notification_center import NotificationCenter
 from score_manager import ScoreManager
 from sound_manager import SoundManager
+import winsound
+
+
+
+from light import Light
 
 import os
 
@@ -46,8 +51,9 @@ class Pinball:
             os.environ['SDL_AUDIODRIVER'] = 'dummy'
         pygame.init()
         pygame.mixer.init()
-        pygame.mixer.set_num_channels(16)
-        
+        pygame.mixer.set_num_channels(8)
+        (self.beep_hz, self.beep_dur) = (600, 200)
+
         self.settings = Settings()
         self.bg = None
         self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
@@ -139,6 +145,13 @@ class Pinball:
             print("Flipper image not found, using fallback drawing.")
             self.flipper_image = None
 
+         # Load light image
+        try:
+            light_img = pygame.image.load(os.path.join(base_dir, 'light.png')).convert_alpha()
+            self.light_image = light_img
+        except:
+            self.light_image = None
+
         
 
 
@@ -175,8 +188,8 @@ class Pinball:
 
         # Table elements
         self.table_builder = TableBuilder(self.settings, self.block_texture, self.tri_texture, self.tri_flipped, self.tri_mirrored)
-        self.bumpers = self.table_builder.generate_bumpers(self.orb_image, self.small_orb_image, self.tiny_bumper_image)
         self.blocks = self.table_builder.generate_blocks()
+        self.bumpers, self.lights = self.table_builder.generate_bumpers(self.orb_image, self.small_orb_image, self.tiny_bumper_image, self.light_image)
 
         # Physics engine
         self.physics_engine = PhysicsEngine(
@@ -271,6 +284,9 @@ class Pinball:
 
     def _handle_menu_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+            # Sound test
+            winsound.Beep(440, 200)
+            winsound.Beep(640, 200)
             self._start_game()
 
     def _handle_game_over_event(self, event):
@@ -286,7 +302,7 @@ class Pinball:
             elif event.key == pygame.K_RIGHT:
                 self.fr.active = True
                 self.fr.activate()
-                self.notification_center.post_notification('flipper_click', self.fl)
+                self.notification_center.post_notification('flipper_click', self.fr)
                 
             elif event.key == pygame.K_p:
                 self._set_state(GameState.PAUSED)
@@ -319,6 +335,7 @@ class Pinball:
                     self.secondary_message = 'SAVE'   # display during grace period
                     self.notification_center.post_notification('ball_launch')
                     
+                    
     def _handle_paused_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
             self._set_state(GameState.PLAYING)
@@ -330,7 +347,7 @@ class Pinball:
 
     def _update_messages(self):
         if self.state == GameState.MENU:
-            self.main_message = "CAST A SPELL"
+            self.main_message = "CAST A SPELL!"
             self.secondary_message = "'ENTER' TO INSERT COIN"
         elif self.state == GameState.PAUSED:
             self.main_message = "PAUSED"
@@ -398,12 +415,44 @@ class Pinball:
                      
                  else:
                      self._set_state(GameState.GAME_OVER)
+                     winsound.Beep(640, 200)
+                     winsound.Beep(440, 200)
+                     winsound.Beep(640, 200)
+                     winsound.Beep(440, 200)
+
+            # Update lights
+            for light in self.lights:
+                light.update(pygame.time.get_ticks())
+                
 
 
     # Check for Orb hits:
     def on_bumper_hit(self, bumper):
         if self.state != GameState.PLAYING:
             return
+       
+        # Find the matching light and update its color to match the bumper
+        try:
+            idx = self.bumpers.index(bumper)
+            if idx < len(self.lights):
+                light = self.lights[idx]
+                light.set_color(bumper.color)   # sync color with bumper
+                light.turn_on(pygame.time.get_ticks())
+        except ValueError:
+            pass
+        try:
+            idx = self.bumpers.index(bumper)
+            if idx < len(self.lights):
+                self.lights[idx].turn_on(pygame.time.get_ticks())
+        except ValueError:
+            pass
+        # Find the index of the bumper
+        for i, b in enumerate(self.bumpers):
+            if b is bumper:
+                if i < len(self.lights):
+                    self.lights[i].turn_on(pygame.time.get_ticks())
+                break
+
         if bumper.radius > 20:
             print("Large bumper color:", bumper.color)   # debug
             if bumper.color == self.settings.blu:
@@ -418,8 +467,6 @@ class Pinball:
         if msg:
             self.temp_message = msg
             self.temp_message_time = pygame.time.get_ticks()
-
-            
                 
 
     # Drawing
@@ -437,12 +484,16 @@ class Pinball:
         
 
         # Game elements
-        self.fl.draw(self.screen)
-        self.fr.draw(self.screen)
+        
         self.b.draw_ball()
+        for light in self.lights:
+            light.draw(self.screen)
         self.draw_bumpers()
         self.plunger.draw(self.screen)
         self.draw_blocks()
+        self.fl.draw(self.screen)
+        self.fr.draw(self.screen)
+       
 
         # Title
         try:
