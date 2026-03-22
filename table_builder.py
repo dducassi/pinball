@@ -236,7 +236,7 @@ class TableBuilder:
         left_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         left_funnel_vertices = [
             (3 * self.settings.br, left_top_y - funnel_height),
-            (3 * self.settings.br, left_top_y),
+            (3 * self.settings.br + 6, left_top_y),
             (2/7 * self.playfield_width - self.settings.br * 1.1, left_bottom_y),
             (2/7 * self.playfield_width - self.settings.br * 1.7, left_bottom_y - funnel_height)
         ]
@@ -247,7 +247,7 @@ class TableBuilder:
         right_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         right_funnel_vertices = [
             (self.playfield_width - 3 * self.settings.br, right_top_y - funnel_height),
-            (self.playfield_width - 3 * self.settings.br, right_top_y),
+            (self.playfield_width - 3 * self.settings.br - 6, right_top_y),
             (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.1, right_bottom_y),
             (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.7, right_bottom_y - funnel_height)
         ]
