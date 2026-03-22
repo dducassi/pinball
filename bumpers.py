@@ -57,7 +57,8 @@ class Bumper:
                 screen.blit(self.original_circular, rect)
         else:
             if self.color == (255,30,0):
-                print("RED, drawing circle")
+                #print("RED, drawing circle")
+                pass
             pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
 
         if glow_active:
