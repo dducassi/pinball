@@ -17,6 +17,7 @@ from physics_engine import PhysicsEngine
 from table_builder import TableBuilder
 from notification_center import NotificationCenter
 from score_manager import ScoreManager
+from sound_manager import SoundManager
 
 import os
 
@@ -44,6 +45,8 @@ class Pinball:
             os.environ['SDL_VIDEODRIVER'] = 'dummy'
             os.environ['SDL_AUDIODRIVER'] = 'dummy'
         pygame.init()
+        pygame.mixer.init()
+        pygame.mixer.set_num_channels(16)
         
         self.settings = Settings()
         self.bg = None
@@ -143,6 +146,7 @@ class Pinball:
 
         self.notification_center = NotificationCenter()
         self.score_manager = ScoreManager(self.notification_center, self.settings)
+        self.sound_manager = SoundManager(self.notification_center, base_dir)
 
         # High score
         self.high_score = self.load_high_score()
@@ -278,9 +282,12 @@ class Pinball:
             if event.key == pygame.K_LEFT:
                 self.fl.active = True
                 self.fl.activate()
+                self.notification_center.post_notification('flipper_click', self.fl)
             elif event.key == pygame.K_RIGHT:
                 self.fr.active = True
                 self.fr.activate()
+                self.notification_center.post_notification('flipper_click', self.fl)
+                
             elif event.key == pygame.K_p:
                 self._set_state(GameState.PAUSED)
             elif event.key == pygame.K_r:
@@ -310,6 +317,8 @@ class Pinball:
                     self.ball_save_active = True
                     self.ball_save_start_time = pygame.time.get_ticks()
                     self.secondary_message = 'SAVE'   # display during grace period
+                    self.notification_center.post_notification('ball_launch')
+                    
     def _handle_paused_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
             self._set_state(GameState.PLAYING)
@@ -376,14 +385,17 @@ class Pinball:
                  self.ball_save_active = False   # used up
                  self.b.reset()
                  self.b.trapped = False
+                 self.notification_center.post_notification('ball_saved')
              else:
                  self.temp_message = 'BALL LOST'
                  self.secondary_message = ''
                  self.temp_message_time = now
                  self.lives -= 1
+                 self.notification_center.post_notification('ball_lost')
                  if self.lives > 0:
                      self.b.reset()
                      self.b.trapped = False
+                     
                  else:
                      self._set_state(GameState.GAME_OVER)
 
