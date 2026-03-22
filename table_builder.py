@@ -30,25 +30,25 @@ class TableBuilder:
         x = self.playfield_width / 5 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin + self.settings.br * 5
         bump_rad = 11
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
 
         # Left upper pointer (tiny)
         x = self.playfield_width / 9 + self.settings.lane_wall_thickness
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 6
         bump_rad = 7
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
 
         # Right upper pointer (tiny)
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness + self.settings.br
         y = self.playfield_height / 5 + self.top_margin - self.settings.br * 3
         bump_rad = 9
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
 
         # Right lower pointer (tiny)
         x = 4 * self.playfield_width / 5 + self.settings.lane_wall_thickness - 1 * self.settings.br
         y = self.playfield_height / 5 + self.top_margin +  self.settings.br * 7
         bump_rad = 13
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, tiny_bumper_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
 
 
 
@@ -66,8 +66,8 @@ class TableBuilder:
 
         # Wizard's chest
         x = self.playfield_width // 2
-        y = self.playfield_height / 2 + self.top_margin - 35
-        bump_rad = 5.5
+        y = self.playfield_height / 2 + self.top_margin - 30
+        bump_rad = 8
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
 
         # Wizard left
@@ -76,7 +76,7 @@ class TableBuilder:
         bump_rad = 5.5
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
 
-        # Wizard rigt
+        # Wizard right
         x = self.playfield_width // 2 + 25
         y = self.playfield_height / 2 + self.top_margin - 85
         bump_rad = 5.5
@@ -241,6 +241,16 @@ class TableBuilder:
         ]
         blocks.append(Block(right_funnel_vertices, self.settings.slv, self.settings.restitution, pattern=True))
 
+        # Top left redirector
+        redirector_height = 27
+        redirector_top_y = self.top_margin
+        redirector_bottom_y = self.top_margin + redirector_height
+        redirector_vertices = [
+            (0, redirector_top_y),                     # top‑left
+            (redirector_height, redirector_top_y),     # top‑right
+            (0, redirector_bottom_y)                   # bottom‑left
+        ]
+        blocks.append(Block(redirector_vertices, self.settings.slv, self.settings.restitution, image = self.tri_flipped))
 
         # Bottom stopper block
         stopper_height = 10
