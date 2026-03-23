@@ -145,6 +145,7 @@ class Block:
             pygame.draw.polygon(screen, self.c, self.vertices)
 
                 # Draw bevel effect for sloping edges (funnel blocks)
+                # Draw bevel effect for sloping edges (funnel blocks)
         if self.pattern and len(self.vertices) == 4:
             edges = [(self.vertices[i], self.vertices[(i+1)%4]) for i in range(4)]
             for (p1, p2) in edges:
@@ -152,6 +153,21 @@ class Block:
                 if abs(p1[0] - p2[0]) > 5:
                     dx = p2[0] - p1[0]
                     dy = p2[1] - p1[1]
+                    edge_len = math.hypot(dx, dy)
+                    if edge_len == 0:
+                        continue
+                    # Unit vector along edge
+                    ux = dx / edge_len
+                    uy = dy / edge_len
+                    # Inset amount (pixels) – adjust as needed
+                    inset = 2
+                    if inset * 2 >= edge_len:
+                        inset = edge_len / 2.1  # avoid zero length
+
+                    # New start and end points inset along the edge
+                    s1 = (p1[0] + ux * inset, p1[1] + uy * inset)
+                    s2 = (p2[0] - ux * inset, p2[1] - uy * inset)
+
                     # Perpendicular vector (rotate 90 deg)
                     perp_x = -dy
                     perp_y = dx
@@ -159,15 +175,15 @@ class Block:
                     if length > 0:
                         perp_x /= length
                         perp_y /= length
-                    # Flip colors: top edge (downward) gets dark, bottom edge (upward) gets light
+                    # Lighting/Shading
                     if p2[1] > p1[1]:   # downward sloping (top edge) -> shadow
                         color = (30, 30, 30)        # dark gray
                     else:                # upward sloping (bottom edge) -> highlight
                         color = (210, 210, 210)    # light gray
-                    # Draw a thick line (5 lines) to simulate bevel
+                    # Draw a thick line (5 lines) to simulate bevel, using inset points
                     for d in range(-2, 3):
                         ox = -perp_x * d * 0.5
                         oy = -perp_y * d * 0.5
-                        start = (p1[0] + ox, p1[1] + oy)
-                        end = (p2[0] + ox, p2[1] + oy)
+                        start = (s1[0] + ox, s1[1] + oy)
+                        end = (s2[0] + ox, s2[1] + oy)
                         pygame.draw.line(screen, color, start, end, 1)
