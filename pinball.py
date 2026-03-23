@@ -135,6 +135,36 @@ class Pinball:
             self.tri_flipped = None
             self.tri_mirrored = None
 
+        try:
+            edge_vert = pygame.image.load(os.path.join(base_dir, 'edge_vert.png')).convert_alpha()
+            self.edge_vert_texture = edge_vert
+            print("Vertical edge texture loaded")
+        except:
+            print("edge_vert.png not found")
+            self.edge_vert_texture = None
+
+        try:
+            edge_horz = pygame.image.load(os.path.join(base_dir, 'edge_horz.png')).convert_alpha()
+            self.edge_horz_texture = edge_horz
+            print("Horizontal edge texture loaded")
+        except:
+            print("edge_horz.png not found")
+            self.edge_horz_texture = None
+
+        wall_thick = self.settings.lane_wall_thickness
+
+        if self.edge_vert_texture:
+            self.edge_vert_texture = pygame.transform.scale(
+                self.edge_vert_texture,
+                (wall_thick, self.edge_vert_texture.get_height())
+            )
+
+        if self.edge_horz_texture:
+            self.edge_horz_texture = pygame.transform.scale(
+                self.edge_horz_texture,
+                (self.edge_horz_texture.get_width(), wall_thick)
+        )
+
         
         # Load flipper image
         try:
@@ -176,18 +206,26 @@ class Pinball:
         # Flippers
         self.fl = Flipper(
             2/7 * self.settings.playfield_width,
-            self.playfield_y + self.settings.playfield_height - 19/140 * self.settings.playfield_height,
+            self.playfield_y + self.settings.playfield_height - 19/140 * self.settings.playfield_height + 1,
             self.settings.f_length, 0.6, True
         )
         self.fr = Flipper(
             5/7 * self.settings.playfield_width,
-            self.playfield_y + self.settings.playfield_height - 19/140 * self.settings.playfield_height,
+            self.playfield_y + self.settings.playfield_height - 19/140 * self.settings.playfield_height + 1,
             self.settings.f_length, -0.6, False
         )
         self.flippers = [self.fl, self.fr]
 
         # Table elements
-        self.table_builder = TableBuilder(self.settings, self.block_texture, self.tri_texture, self.tri_flipped, self.tri_mirrored)
+        self.table_builder = TableBuilder(
+            self.settings,
+            self.block_texture,
+            self.tri_texture,
+            self.tri_flipped,
+            self.tri_mirrored,
+            edge_vert_texture=self.edge_vert_texture,
+            edge_horz_texture=self.edge_horz_texture
+        )
         self.blocks = self.table_builder.generate_blocks()
         self.bumpers, self.lights = self.table_builder.generate_bumpers(self.orb_image, self.small_orb_image, self.tiny_bumper_image, self.light_image)
 
@@ -480,7 +518,7 @@ class Pinball:
                 msg = "BALL LIGHTNING!"
                 
         else:
-            msg = random.choice(["BOOM!", "HISS!", "POP!", "ZAP!"])
+            msg = random.choice(["BOOM!", "HISS!", "POP!", "ZAP!", "BUZZ!"])
         if msg:
             self.temp_message = msg
             self.temp_message_time = pygame.time.get_ticks()
