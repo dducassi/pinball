@@ -52,7 +52,7 @@ class Pinball:
         pygame.init()
         pygame.mixer.init()
         pygame.mixer.set_num_channels(8)
-        (self.beep_hz, self.beep_dur) = (600, 200)
+        
 
         self.settings = Settings()
         self.bg = None
@@ -60,6 +60,20 @@ class Pinball:
         self.state = GameState.MENU
         self.playfield_x = 0
         self.playfield_y = self.settings.top_margin
+        # Load background music
+        self.music_loaded = False
+        try:
+            # Use a suitable format (OGG recommended)
+            music_path = os.path.join(base_dir, 'music.mid')
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.set_volume(self.settings.music_volume)
+            pygame.mixer.music.play(-1)   # loop indefinitely
+            self.music_loaded = True
+            print("Background music loaded and playing.")
+        except Exception as e:
+            print(f"Background music not loaded: {e}")
+
+      
 
         # Message system
         self.main_message = ""
@@ -423,6 +437,9 @@ class Pinball:
         self.score_manager.reset()
         self.lives = 3
         self.ball_save_active = False
+        if self.music_loaded:
+            pygame.mixer.music.stop()
+            pygame.mixer.music.play(-1)
 
     # Physics update
     def _update(self):
