@@ -51,6 +51,16 @@ class Flipper:
         if not self.is_left:
             self.length = -length   # negative for right flipper (drawing)
 
+    def reset(self):
+        """Reset flipper to deactivated state and default angle."""
+        self.active = False
+        self.angular_vel = 0
+        if self.is_left:
+            self.target_angle = 0.55
+        else:
+            self.target_angle = -0.55
+        self.angle = self.target_angle
+
     def update(self):
         self.angular_vel += (self.target_angle - self.angle) * 0.06
         self.angular_vel *= 0.8
