@@ -33,6 +33,12 @@ class Light:
         else:
             self.image = None
 
+    def reset(self, initial_color):
+        """Turn off light and set color to initial."""
+        self.on = False
+        self.color = initial_color
+        self._update_image()
+
     def set_color(self, new_color):
         self.color = new_color
         self._update_image()
