@@ -5,34 +5,32 @@ class ScoreManager:
         self.score = 0
         self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
 
-        # High score
-        self.high_score = self.load_high_score()
-        self.notification_center.add_observer('score_changed', self.on_score_changed)
-
     def on_bumper_hit(self, bumper):
-        
         if bumper.radius > 20:
             self.score += self.settings.pph * 10
-
-        if 5.5 < bumper.radius < 15:
-            self.score += self.settings.pph * 5
-
-        if bumper.radius < 6:
+        elif 5.5 < bumper.radius < 15:
             self.score += self.settings.pph * 2
-        
+        elif bumper.radius < 6:
+            self.score += self.settings.pph * 3
         else:
-            self.score += self.settings.pph
+            self.score += self.settings.pph //2
 
-        # Cycle bumper color
+        # Cycle bumper color (only for bumpers with radius > 5)
         if bumper.radius > 5:
             if bumper.color == self.settings.red:
-                bumper.color = self.settings.blu
+                new_color = self.settings.blu
             elif bumper.color == self.settings.blu:
-                bumper.color = self.settings.wht
-            else: # bumper.color == self.settings.wht
-                bumper.color = self.settings.red
+                new_color = self.settings.wht
+            else:  # white
+                new_color = self.settings.red
+            bumper.color = new_color
+
+            # If it's a large bumper, notify others to sync colors
+            if bumper.radius > 20:
+                self.notification_center.post_notification('large_bumper_hit', new_color)
+
         self.notification_center.post_notification('score_changed', self.score)
-    
+
     def reset(self):
         self.score = 0
 
