@@ -62,6 +62,8 @@ class Settings:
         self.gry = (100, 100, 100)
         self.slv = (150, 150, 150)
 
+        self.music_volume = 2   # 0.0 to 1.0
+
         self.init_dynamic_settings()
     
     def init_dynamic_settings(self):
