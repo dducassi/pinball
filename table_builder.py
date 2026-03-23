@@ -215,9 +215,9 @@ class TableBuilder:
        
         # Right block -- triangle texture
         right_vertices = [
-            (self.playfield_width, self.screen_height - 4/14 * self.playfield_height),
-            (self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
-            (self.playfield_width - 2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height)
+            (self.playfield_width, self.screen_height - 4/14 * self.playfield_height + 1),
+            (self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height + 1),
+            (self.playfield_width - 2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height + 1)
         ]
         blocks.append(Block(right_vertices, self.settings.slv, self.settings.restitution, self.tri_texture))
 
