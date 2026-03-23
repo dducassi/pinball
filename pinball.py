@@ -345,6 +345,20 @@ class Pinball:
         self.state = new_state
         self._update_messages()
 
+    def _reset_game_state(self):
+        """Reset flippers, bumpers, lights for a fresh game."""
+        # Reset flippers
+        for flipper in self.flippers:
+            flipper.reset()
+
+        # Reset bumpers to initial color (blue)
+        for bumper in self.bumpers:
+            bumper.color = self.settings.wht
+
+        # Reset lights: turn off and set color to match bumpers' initial
+        for light in self.lights:
+            light.reset(self.settings.wht)
+
     def _update_messages(self):
         if self.state == GameState.MENU:
             self.main_message = "CAST A SPELL!"
@@ -359,8 +373,11 @@ class Pinball:
             self.main_message = ""
             self.secondary_message = ""
 
+    
+
     # Game start
     def _start_game(self):
+        self._reset_game_state()
         self._set_state(GameState.PLAYING)
         self.b.reset()
         self.b.trapped = False
