@@ -5,12 +5,15 @@ from light import Light
 import math
 
 class TableBuilder:
-    def __init__(self, settings, block_texture=None, tri_texture=None, tri_flipped=None, tri_mirrored=None, pattern=False):
+    def __init__(self, settings, block_texture=None, tri_texture=None, tri_flipped=None, tri_mirrored=None, pattern=False, edge_vert_texture=None,
+        edge_horz_texture=None):
         self.settings = settings
         self.block_texture = block_texture
         self.tri_texture = tri_texture
         self.tri_flipped = tri_flipped
         self.tri_mirrored = tri_mirrored
+        self.edge_vert = edge_vert_texture
+        self.edge_horz = edge_horz_texture
         self.playfield_width = settings.playfield_width
         self.playfield_height = settings.playfield_height
         self.top_margin = settings.top_margin
@@ -19,6 +22,8 @@ class TableBuilder:
         self.screen_height = settings.screen_height
         self.guide_height = 30 
         self.light = None
+
+        
 
    
     def generate_bumpers(self, orb_image=None, small_orb_image=None, tiny_bumper_image=None, light_image=None):
@@ -76,21 +81,21 @@ class TableBuilder:
 
         # Wizard's chest
         x = self.playfield_width // 2
-        y = self.playfield_height / 2 + self.top_margin - 30
+        y = self.playfield_height / 2 + self.top_margin - 55
         bump_rad = 8
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
         lights.append(Light(x, y, 10.5, color, light_image))
 
         # Wizard left
-        x = self.playfield_width // 2 - 25
-        y = self.playfield_height / 2 + self.top_margin - 85
+        x = self.playfield_width // 2 - 20
+        y = self.playfield_height / 2 + self.top_margin - 107
         bump_rad = 5.5
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
         lights.append(Light(x, y, 8, color, light_image))
 
         # Wizard right
-        x = self.playfield_width // 2 + 25
-        y = self.playfield_height / 2 + self.top_margin - 85
+        x = self.playfield_width // 2 + 20
+        y = self.playfield_height / 2 + self.top_margin - 107
         bump_rad = 5.5
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
         lights.append(Light(x, y, 8, color, light_image))
@@ -156,25 +161,25 @@ class TableBuilder:
             (wall_x - thickness, self.top_margin)
         ]
         
-        return(OneWayBlock(vertices, (100,100,100), restitution=self.settings.restitution, direction='left', image=self.block_texture))
+        return(OneWayBlock(vertices, (100,100,100), restitution=self.settings.restitution, direction='left', image=self.edge_vert))
         
     def generate_bottom_wall(self):
-        thickness = 5  # height of the bottom strip
+        thickness = 8  # height of the bottom strip
         vertices = [
             (0, self.screen_height - thickness),
             (0, self.screen_height),
             (self.screen_width, self.screen_height),
             (self.screen_width, self.screen_height - thickness)
         ]
-        return (OneWayBlock(vertices, (180,180,180), restitution=self.settings.restitution, direction='down', image = self.block_texture))
+        return (OneWayBlock(vertices, (180,180,180), restitution=self.settings.restitution, direction='down', image=self.edge_horz))
     
     def generate_blocks(self):
         blocks = []
         # Left block (main) – no texture
         left_vertices = [
-            (0, self.screen_height - 4/14 * self.playfield_height),
-            (0, self.screen_height - 2/14 * self.playfield_height),
-            (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+            (0, self.screen_height - 4/14 * self.playfield_height + 1),
+            (0, self.screen_height - 2/14 * self.playfield_height + 1),
+            (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height + 1),
             
         ]
         blocks.append(Block(left_vertices, self.settings.slv, self.settings.restitution, self.tri_flipped))
@@ -186,7 +191,7 @@ class TableBuilder:
             (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
             (2/7 * self.playfield_width, self.screen_height),
         ]
-        blocks.append(Block(left_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
+        blocks.append(Block(left_lower_vertices, self.settings.slv, self.settings.restitution, image=self.block_texture))
 
         # Left lower border
         left_lower_vertices = [
@@ -195,11 +200,20 @@ class TableBuilder:
             (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
             (2/7 * self.playfield_width, self.screen_height),
         ]
-        blocks.append(Block(left_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
+        blocks.append(Block(left_lower_vertices, self.settings.slv, self.settings.restitution, image=self.edge_vert))
+
+        # Left lower top border
+        left_lower_top_vertices = [
+            (0, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+            (0, self.top_margin + self.playfield_height - 2/14 * self.playfield_height + 5),
+            (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height + 5),
+            (2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+        ]
+        blocks.append(Block(left_lower_top_vertices, self.settings.slv, self.settings.restitution, image=self.edge_horz))
 
 
        
-        # Right block (main) – no texture
+        # Right block -- triangle texture
         right_vertices = [
             (self.playfield_width, self.screen_height - 4/14 * self.playfield_height),
             (self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
@@ -217,17 +231,25 @@ class TableBuilder:
             (self.playfield_width - 2/7 * self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
             (self.playfield_width - 2/7 * self.playfield_width, self.screen_height),
         ]
-        blocks.append(Block(right_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
+        blocks.append(Block(right_lower_vertices, self.settings.slv, self.settings.restitution, image=self.block_texture))
 
         # Right lower border
         right_lower_vertices = [
-            ((self.playfield_width - 2/7 * self.playfield_width) + 5, self.screen_height),
-            ((self.playfield_width - 2/7 * self.playfield_width) + 5, self.screen_height - 2/14 * self.playfield_height),
-            ((self.playfield_width - 2/7 * self.playfield_width), self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
             ((self.playfield_width - 2/7 * self.playfield_width), self.screen_height),
+            ((self.playfield_width - 2/7 * self.playfield_width), self.screen_height - 2/14 * self.playfield_height),
+            ((self.playfield_width - 2/7 * self.playfield_width) + 5, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+            ((self.playfield_width - 2/7 * self.playfield_width) + 5, self.screen_height),
         ]
-        blocks.append(Block(right_lower_vertices, self.settings.slv, self.settings.restitution, image = self.block_texture))
+        blocks.append(Block(right_lower_vertices, self.settings.slv, self.settings.restitution, image=self.edge_vert))
         
+         # Right lower top border
+        right_lower_top_vertices = [
+            (self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+            (self.playfield_width, self.top_margin + self.playfield_height - 2/14 * self.playfield_height + 5),
+            ((self.playfield_width - 2/7 * self.playfield_width), self.top_margin + self.playfield_height - 2/14 * self.playfield_height + 5),
+            ((self.playfield_width - 2/7 * self.playfield_width), self.top_margin + self.playfield_height - 2/14 * self.playfield_height),
+        ]
+        blocks.append(Block(right_lower_top_vertices, self.settings.slv, self.settings.restitution, image=self.edge_horz))
 
         # Funnel blocks above left and right main blocks – no texture
         funnel_height = 50
@@ -273,7 +295,7 @@ class TableBuilder:
             (self.screen_width, stopper_top),
             (self.screen_width, self.screen_height)
         ]
-        blocks.append(Block(stopper_vertices, (100,100,100), restitution=0.2, pattern=True))
+        blocks.append(Block(stopper_vertices, (90,90,90), restitution=0.2))
 
         # Top guide (untextured)
         guide = self.generate_top_guide()
@@ -287,10 +309,7 @@ class TableBuilder:
         oneway = self.generate_one_way_wall()
         blocks.append(oneway)
 
-        # Bottom wall (textured)
        
-        bottom_wall = self.generate_bottom_wall()
-        blocks.append(bottom_wall)
 
         # Top playing field border (textured)
         top_border_vertices = [
@@ -299,16 +318,9 @@ class TableBuilder:
             (self.screen_width, self.top_margin + self.settings.lane_wall_thickness),
             (self.screen_width, self.top_margin)
         ]
-        blocks.append(Block(top_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+        blocks.append(Block(top_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_horz))
 
-      # Top bar (thin decorative strip at very top)
-        top_bar_vertices = [
-            (0, 0),
-            (0, 5),                             # height 5 pixels
-            (self.screen_width, 5),
-            (self.screen_width, 0)
-        ]
-        blocks.append(Block(top_bar_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+      
 
         # Left border (full height, from top to bottom)
         left_border_vertices = [
@@ -317,7 +329,7 @@ class TableBuilder:
             (self.settings.lane_wall_thickness, self.screen_height),
             (self.settings.lane_wall_thickness, 0)
         ]
-        blocks.append(Block(left_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+        blocks.append(Block(left_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_vert))
 
         # Right border (full height)
         right_border_vertices = [
@@ -326,7 +338,7 @@ class TableBuilder:
             (self.screen_width, self.screen_height),
             (self.screen_width, 0)
         ]
-        blocks.append(Block(right_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+        blocks.append(Block(right_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_vert))
         
 
 
@@ -338,14 +350,22 @@ class TableBuilder:
         lane_top = self.top_margin
         lane_bottom = self.screen_height
 
-        # Left lane wall (shortened to allow exit)
+        # Left lane walls (shortened to allow exit)
         left_wall_vertices = [
-            (lane_left - wall_thick, lane_bottom),
+            (lane_left - wall_thick, lane_bottom - 5),
             (lane_left - wall_thick, lane_top + self.guide_height * 2),
-            (lane_left + wall_thick, lane_top + self.guide_height * 2),
-            (lane_left + wall_thick, lane_bottom)
+            (lane_left, lane_top + self.guide_height * 2),
+            (lane_left, lane_bottom - 5)
         ]
-        blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+        blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_vert))
+
+        left_wall_left_vertices = [
+            (lane_left, lane_bottom - 5),
+            (lane_left, lane_top + self.guide_height * 2),
+            (lane_left + wall_thick, lane_top + self.guide_height * 2),
+            (lane_left + wall_thick, lane_bottom - 5)
+        ]
+        blocks.append(Block(left_wall_left_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_vert))
 
         # Left Lane wall cap
         left_wall_vertices = [
@@ -354,7 +374,21 @@ class TableBuilder:
             (lane_left + 7, lane_top + self.guide_height * 2 + 5),
             (lane_left - 7, lane_top + self.guide_height * 2 + 5),
         ]
-        blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.block_texture))
+        blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_horz))
+
+        # Bottom wall (textured)
+       
+        bottom_wall = self.generate_bottom_wall()
+        blocks.append(bottom_wall)
+
+        # Top bar (thin decorative strip at very top)
+        top_bar_vertices = [
+            (0, 0),
+            (0, 8),                             # height 5 pixels
+            (self.screen_width, 8),
+            (self.screen_width, 0)
+        ]
+        blocks.append(Block(top_bar_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_horz))
 
         
 
