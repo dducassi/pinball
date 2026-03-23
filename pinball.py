@@ -198,6 +198,7 @@ class Pinball:
         
         # Observe bumper hits
         self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
+        self.notification_center.add_observer('large_bumper_hit', self.on_large_bumper_hit)
 
         # Ball
         self.lives = 3
@@ -481,48 +482,43 @@ class Pinball:
                 
 
 
-    # Check for Orb hits:
     def on_bumper_hit(self, bumper):
         if self.state != GameState.PLAYING:
             return
-       
-        # Find the matching light and update its color to match the bumper
+
+        # Update corresponding light's color and turn it on
         try:
             idx = self.bumpers.index(bumper)
             if idx < len(self.lights):
                 light = self.lights[idx]
-                light.set_color(bumper.color)   # sync color with bumper
+                light.set_color(bumper.color)
                 light.turn_on(pygame.time.get_ticks())
         except ValueError:
             pass
-        try:
-            idx = self.bumpers.index(bumper)
-            if idx < len(self.lights):
-                self.lights[idx].turn_on(pygame.time.get_ticks())
-        except ValueError:
-            pass
-        # Find the index of the bumper
-        for i, b in enumerate(self.bumpers):
-            if b is bumper:
-                if i < len(self.lights):
-                    self.lights[i].turn_on(pygame.time.get_ticks())
-                break
 
+        # Generate message
         if bumper.radius > 20:
-            print("Large bumper color:", bumper.color)   # debug
             if bumper.color == self.settings.blu:
                 msg = "ORB OF POWER!"
             elif bumper.color == self.settings.red:
                 msg = "FIREBALL!"
             elif bumper.color == self.settings.wht:
                 msg = "BALL LIGHTNING!"
-                
+            else:
+                msg = ""
         else:
             msg = random.choice(["BOOM!", "HISS!", "POP!", "ZAP!", "BUZZ!"])
         if msg:
             self.temp_message = msg
             self.temp_message_time = pygame.time.get_ticks()
-                
+
+    def on_large_bumper_hit(self, color):
+        """Set all bumpers to the given color."""
+        for bumper in self.bumpers:
+            bumper.color = color
+        # Also update lights to match (optional)
+        for light in self.lights:
+            light.set_color(color)
 
     # Drawing
     def _draw(self):
@@ -560,10 +556,19 @@ class Pinball:
         self.screen.blit(title_text, title_rect)
 
         # Score and lives
-        try:
-            f = pygame.font.Font(font_path, 11)
-        except:
-            f = pygame.font.Font(None, 24)
+
+        if self.score_manager.score > 1000000:
+            try:
+                f = pygame.font.Font(font_path, 8)
+            except:
+                f = pygame.font.Font(None, 16)
+        else:
+            try:
+                f = pygame.font.Font(font_path, 11)
+            except:
+                f = pygame.font.Font(None, 24)
+            
+        
         score_text = f.render(f'SCORE: {self.score_manager.score:,}', True, self.settings.wht)
         self.screen.blit(score_text, (12, 65))
         lives_text = f.render(f'BALLS: {self.lives}', True, self.settings.wht)
@@ -571,7 +576,7 @@ class Pinball:
 
         # High score (right side, below score)
         try:
-            high_font = pygame.font.Font(font_path, 8)   # smaller font
+            high_font = pygame.font.Font(font_path, 6)   # smaller font
         except:
             high_font = pygame.font.Font(None, 24)      # fallback
         high_text = high_font.render(f'HIGH: {self.high_score:,}', True, self.settings.wht)
