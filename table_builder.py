@@ -105,8 +105,8 @@ class TableBuilder:
     def generate_top_guide(self):
         """Return a concave guide at the top of the plunger lane, rotated 90° counter‑clockwise."""
         wall_thick = self.settings.lane_wall_thickness
-        lane_left = self.playfield_width - wall_thick
-        lane_right = self.screen_width - wall_thick
+        lane_left = self.playfield_width + 1
+        lane_right = self.screen_width -4
         guide_height = 40
         y_top = self.top_margin
         y_bottom = y_top + guide_height
@@ -118,7 +118,7 @@ class TableBuilder:
         vertices.append((lane_right, y_top))
 
         # Generate points along the concave curve (top‑right to bottom‑left)
-        steps = 24
+        steps = 72
         for i in range(1, steps + 1):
             t = i / steps
             x = lane_right + (lane_left - lane_right) * t
@@ -284,7 +284,7 @@ class TableBuilder:
             (redirector_height, redirector_top_y),     # top‑right
             (0, redirector_bottom_y)                   # bottom‑left
         ]
-        blocks.append(Block(redirector_vertices, self.settings.slv, self.settings.restitution, image = self.tri_flipped))
+        blocks.append(Block(redirector_vertices, (220,220,220), self.settings.restitution,pattern=True))
 
         # Bottom stopper block
         stopper_height = 10
