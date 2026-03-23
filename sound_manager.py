@@ -6,6 +6,7 @@ class SoundManager:
     def __init__(self, notification_center, base_dir):
         self.notification_center = notification_center
         self.base_dir = base_dir
+        self.muted = False
         self._load_sounds()
         self._register_observers()
 
@@ -44,45 +45,61 @@ class SoundManager:
         self.notification_center.add_observer('ball_saved', self.on_ball_saved)
         self.notification_center.add_observer('block_hit', self.on_block_hit)
 
+    def enable_sound(self):
+        self.muted = False
+
+    def disable_sound(self):
+        self.muted = True
+
     def on_bumper_hit(self, bumper):
+        if self.muted:
+            return
         if self.bumper_sound:
             self.bumper_sound.play()
         else:
-            pass
+            winsound.PlaySound("SystemNotification", winsound.SND_ALIAS | winsound.SND_ASYNC)
 
     def on_flipper_click(self, flipper):
+        if self.muted:
+            return
         if self.flipper_sound:
             self.flipper_sound.play()
         else:
-            #winsound.Beep(800, 50)
+            # optional: winsound.Beep(800, 50) but that blocks – skip for now
             pass
 
     def on_ball_launch(self, data):
+        if self.muted:
+            return
         if self.launch_sound:
             self.launch_sound.play()
         else:
-            winsound.Beep(400, 50)
+            winsound.Beep(300, 50)  # still blocking, but rare
 
     def on_ball_lost(self, data):
+        if self.muted:
+            return
         if self.ball_lost_sound:
             self.ball_lost_sound.play()
         else:
-            winsound.Beep(440, 100)
-            winsound.Beep(440, 100)
-            winsound.Beep(440, 100)
+            winsound.Beep(300, 100)
+            winsound.Beep(300, 100)
+            winsound.Beep(300, 100)
 
     def on_ball_saved(self, data):
+        if self.muted:
+            return
         if self.save_sound:
             self.save_sound.play()
         else:
-            winsound.Beep(440, 100)
-            winsound.Beep(440, 100)
-            winsound.Beep(700, 100)
+            winsound.Beep(300, 100)
+            winsound.Beep(300, 100)
+            winsound.Beep(800, 100)
 
     def on_block_hit(self, block):
+        if self.muted:
+            return
         if self.block_sound:
             self.block_sound.play()
         else:
-            # optional fallback
-            print("Block hit sound failed.")
             pass
