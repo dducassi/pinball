@@ -55,6 +55,9 @@ class Pinball:
         
 
         self.settings = Settings()
+        
+
+
         self.bg = None
         self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
         self.state = GameState.MENU
@@ -62,6 +65,7 @@ class Pinball:
         self.playfield_y = self.settings.top_margin
         # Load background music
         self.music_loaded = False
+        self.sound_enabled = True   # global sound toggle
         try:
             # Use a suitable format (OGG recommended)
             music_path = os.path.join(base_dir, 'music.mid')
@@ -79,6 +83,39 @@ class Pinball:
         self.main_message = ""
         self.secondary_message = ""
         self._update_messages()
+        
+
+        # Menu system
+        self.menu_options = ['Start Game', 'High Scores', 'Table Selector', 'Audio', 'Video', 'Credits', 'Exit']
+        self.selected_option = 0
+        self.show_credits = False
+        self.show_high_scores = False
+        self.credits_text = [ ... ]   # as before
+        self.sound_enabled = True   # global sound toggle
+        self.high_scores = self.load_high_scores()
+        self.high_score = self.high_scores[0][0] if self.high_scores else 0
+        self.new_high_score_achieved = False
+        self.credits_text = [
+            "Wizard's Tower Pinball",
+            "",
+            "",
+            "Design & Programming: Daniel Ducassi",
+            "",
+            "Music: 'In the Hall of the Mountain King'",
+            "by Edvard Grieg"
+            "",
+            "Graphics: Daniel Ducassi",
+            ","
+            "Audio: Daniel Ducassi and Nazli Koca"
+            "",
+            "",
+            "Thanks for playing!"
+        ]
+        self.audio_submenu = False
+        self.audio_options = ['Sound Effects', 'Music', 'Back']
+        self.audio_selected = 0
+        self.resume_game = False
+        
 
         # Temporary message system
         self.temp_message = ""
@@ -205,8 +242,8 @@ class Pinball:
         self.score_manager = ScoreManager(self.notification_center, self.settings)
         self.sound_manager = SoundManager(self.notification_center, base_dir)
 
-        # High score
-        self.high_score = self.load_high_score()
+        # Observe score changes
+
         self.notification_center.add_observer('score_changed', self.on_score_changed)
 
         
@@ -283,24 +320,65 @@ class Pinball:
         self.ball_save_start_time = 0
         self.ball_save_duration = 10000  # 10 seconds in milliseconds  
 
-    def load_high_score(self):
-        try:
-            with open('highscore.txt', 'r') as f:
-                return int(f.read().strip())
-        except:
-            return 0
+    def _update_menu_options(self):
+        if self.resume_game:
+            self.menu_options = ['Resume Game', 'High Scores', 'Table Selector', 'Audio', 'Video', 'Credits', 'Exit']
+        else:
+            self.menu_options = ['Start Game', 'High Scores', 'Table Selector', 'Audio', 'Video', 'Credits', 'Exit']
+        # Reset selected option to avoid index errors
+        if self.selected_option >= len(self.menu_options):
+            self.selected_option = 0
 
-    def save_high_score(self):
+    def load_high_scores(self):
+        scores = []
         try:
-            with open('highscore.txt', 'w') as f:
-                f.write(str(self.high_score))
+            with open('highscores.txt', 'r') as f:
+                for line in f:
+                    parts = line.strip().split(',')
+                    if len(parts) == 2:
+                        scores.append((int(parts[0]), parts[1]))
         except:
-            print("Could not save high score.")
+            pass
+        scores.sort(key=lambda x: x[0], reverse=True)
+        return scores[:5]
 
+    def save_high_score(self, score):
+        """Insert score into list, keep top 5, save to file, and update top display."""
+        from datetime import datetime
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        self.high_scores.append((score, date_str))
+        self.high_scores.sort(key=lambda x: x[0], reverse=True)
+        self.high_scores = self.high_scores[:5]
+        # Update the displayed high score
+        self.high_score = self.high_scores[0][0] if self.high_scores else 0
+        try:
+            with open('highscores.txt', 'w') as f:
+                for s, d in self.high_scores:
+                    f.write(f"{s},{d}\n")
+        except:
+            pass
+
+    def _draw_high_scores(self):
+        try:
+            font = pygame.font.Font(font_path, 12)
+        except:
+            font = pygame.font.Font(None, 24)
+        start_y = self.settings.top_margin // 2 + 50
+        for i, (score, date) in enumerate(self.high_scores):
+            text = font.render(f"{i+1}. {score:,}  ({date})", True, self.settings.wht)
+            text_rect = text.get_rect(center=(self.settings.screen_width // 2, start_y + i * 25))
+            self.screen.blit(text, text_rect)
+        prompt_font = pygame.font.Font(font_path, 8) if font_path else pygame.font.Font(None, 16)
+        prompt = prompt_font.render("Press ESC to return", True, self.settings.wht)
+        prompt_rect = prompt.get_rect(center=(self.settings.screen_width // 2, start_y + len(self.high_scores) * 25 + 30))
+        self.screen.blit(prompt, prompt_rect)
+
+    
     def on_score_changed(self, score):
-        if score > self.high_score:
-            self.high_score = score
-            self.save_high_score()
+     # Draw high score, but don't save it yet
+     if score > self.high_score:
+         self.high_score = score
+         self.new_high_score_achieved = True
 
     # Drawing helpers
     def draw_bumpers(self):
@@ -310,6 +388,34 @@ class Pinball:
     def draw_blocks(self):
         for block in self.blocks:
             block.draw(self.screen)
+
+    def _draw_menu_options(self):
+        try:
+            font = pygame.font.Font(font_path, 13)
+        except:
+            font = pygame.font.Font(None, 24)
+        start_y = self.settings.screen_height // 2 # Middle minus rough screen length /2
+        for i, option in enumerate(self.menu_options):
+            color = self.settings.wht if i != self.selected_option else self.settings.red
+            text = font.render(option, True, color)
+            text_rect = text.get_rect(center=(self.settings.playfield_width // 2, start_y + i * 28))
+            self.screen.blit(text, text_rect)
+
+    def _draw_credits(self):
+        try:
+            font = pygame.font.Font(font_path, 7)
+        except:
+            font = pygame.font.Font(None, 12)
+        start_y = self.settings.top_margin // 2 + 40
+        for i, line in enumerate(self.credits_text):
+            text = font.render(line, True, self.settings.wht)
+            text_rect = text.get_rect(center=(self.settings.screen_width // 2, start_y + i * 20))
+            self.screen.blit(text, text_rect)
+        # small prompt
+        prompt_font = pygame.font.Font(font_path, 8) if font_path else pygame.font.Font(None, 16)
+        prompt = prompt_font.render("Press ESC to return", True, self.settings.wht)
+        prompt_rect = prompt.get_rect(center=(self.settings.screen_width // 2, start_y + len(self.credits_text) * 20 + 30))
+        self.screen.blit(prompt, prompt_rect)
         
     # Game loop
     def run_game(self):
@@ -334,13 +440,58 @@ class Pinball:
                 self._handle_paused_event(event)
             elif self.state == GameState.GAME_OVER:
                 self._handle_game_over_event(event)
+            elif event.key == pygame.K_ESCAPE:
+                self.resume_game = True
+                self._set_state(GameState.MENU)
 
     def _handle_menu_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            # Sound test
-            winsound.Beep(440, 200)
-            winsound.Beep(640, 200)
+        # Handle sub‑screens (credits, high scores)
+        if self.show_credits or self.show_high_scores:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self.show_credits = False
+                self.show_high_scores = False
+            return
+
+        # Main menu navigation (only if no sub‑screen active)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self.selected_option = (self.selected_option - 1) % len(self.menu_options)
+            elif event.key == pygame.K_DOWN:
+                self.selected_option = (self.selected_option + 1) % len(self.menu_options)
+            elif event.key == pygame.K_RETURN:
+                self._select_menu_option()
+            elif event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                sys.exit()
+
+    def _select_menu_option(self):
+        option = self.menu_options[self.selected_option]
+        if option == 'Start Game':
             self._start_game()
+        elif option == 'Table Selector':
+            self.temp_message = "Coming soon!"
+            self.temp_message_time = pygame.time.get_ticks()
+        elif option == 'Audio':
+            self.sound_enabled = not self.sound_enabled
+            self.temp_message = "Sound ON" if self.sound_enabled else "Sound OFF"
+            self.temp_message_time = pygame.time.get_ticks()
+            if self.sound_enabled:
+                self.sound_manager.enable_sound()
+            else:
+                self.sound_manager.disable_sound()
+        elif option == 'Video':
+            self.temp_message = "Coming soon!"
+            self.temp_message_time = pygame.time.get_ticks()
+        elif option == 'Credits':
+            self.show_credits = True
+        elif option == 'Exit':
+            pygame.quit()
+            sys.exit()
+        elif option == 'High Scores':
+            self.show_high_scores = True
+        elif option == 'Resume Game':
+            self.resume_game = False
+            self._set_state(GameState.PLAYING)
 
     def _handle_game_over_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
@@ -364,6 +515,9 @@ class Pinball:
             elif event.key == pygame.K_SPACE:
                 if not self.b.launched:
                     self.plunger.start_pull()   # <-- start pull on press
+            elif event.key == pygame.K_ESCAPE:
+                self.resume_game = True
+                self._set_state(GameState.MENU)
 
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT:
@@ -396,6 +550,8 @@ class Pinball:
     # State management
     def _set_state(self, new_state):
         self.state = new_state
+        if new_state == GameState.MENU:
+            self._update_menu_options()
         self._update_messages()
 
     def _reset_game_state(self):
@@ -415,7 +571,7 @@ class Pinball:
     def _update_messages(self):
         if self.state == GameState.MENU:
             self.main_message = "CAST A SPELL!"
-            self.secondary_message = "'ENTER' TO INSERT COIN"
+            self.secondary_message = "INSERT COIN"
         elif self.state == GameState.PAUSED:
             self.main_message = "PAUSED"
             self.secondary_message = ""
@@ -430,6 +586,7 @@ class Pinball:
 
     # Game start
     def _start_game(self):
+        self.resume_game = False
         self._reset_game_state()
         self._set_state(GameState.PLAYING)
         self.b.reset()
@@ -437,6 +594,7 @@ class Pinball:
         self.score_manager.reset()
         self.lives = 3
         self.ball_save_active = False
+        self.new_high_score_achieved = False
         if self.music_loaded:
             pygame.mixer.music.stop()
             pygame.mixer.music.play(-1)
@@ -487,11 +645,13 @@ class Pinball:
                      self.b.trapped = False
                      
                  else:
-                     self._set_state(GameState.GAME_OVER)
-                     winsound.Beep(640, 200)
-                     winsound.Beep(440, 200)
-                     winsound.Beep(640, 200)
-                     winsound.Beep(440, 200)
+                  self._set_state(GameState.GAME_OVER)
+                  if self.new_high_score_achieved:
+                      self.save_high_score(self.score_manager.score)
+                  winsound.Beep(640, 200)
+                  winsound.Beep(440, 200)
+                  winsound.Beep(640, 200)
+                  winsound.Beep(440, 200)
 
             # Update lights
             for light in self.lights:
@@ -545,6 +705,7 @@ class Pinball:
             self.screen.blit(self.bg, (0, self.playfield_y))
         if self.lane_bg:
             self.screen.blit(self.lane_bg, (self.settings.playfield_width, self.playfield_y))
+        
        
 
 
@@ -598,8 +759,22 @@ class Pinball:
             high_font = pygame.font.Font(None, 24)      # fallback
         high_text = high_font.render(f'HIGH: {self.high_score:,}', True, self.settings.wht)
         self.screen.blit(high_text, (self.settings.screen_width - 110, 90))
+       
         # Context messages
         self._draw_messages()
+        
+        # Draw credits overlay if needed
+        if self.state == GameState.MENU and self.show_credits:
+            # Draw a semi‑transparent overlay
+            overlay = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            self.screen.blit(overlay, (0, 0))
+            self._draw_credits()
+        if self.state == GameState.MENU and self.show_high_scores:
+            overlay = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            self.screen.blit(overlay, (0, 0))
+            self._draw_high_scores()
 
         pygame.display.flip()
 
@@ -638,6 +813,13 @@ class Pinball:
             # Place below score (score is at (12, 65); use (12, 90) for secondary)
             sec_rect = sec_surf.get_rect(topleft=(12, 90))
             self.screen.blit(sec_surf, sec_rect)
+                # Draw menu options if in MENU state and not showing credits
+        
+        if self.state == GameState.MENU and not self.show_credits:
+            self._draw_menu_options()
+
+    
+    
     # Test mode
     def run_test(self, num_frames=500):
         print(f"=== HEADLESS TEST MODE ({num_frames} frames) ===")
