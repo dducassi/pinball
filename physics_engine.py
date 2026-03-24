@@ -197,7 +197,7 @@ class PhysicsEngine:
                 ball.resting = False
 
                 # Post block hit notification
-                if abs(ball_dx) > 0.6 or abs(ball_dy) > 0.6:
+                if abs(ball_dx) > 2 or abs(ball_dy) > 2:
                     if not ball.resting:
                         if not ball.trapped:
                             self.notification_center.post_notification('block_hit', block)
@@ -262,7 +262,7 @@ class PhysicsEngine:
 
 
         # --- Trapped detection (ball between flipper and block) ---
-        TRAP_SPEED_THRESH = 0.05
+        TRAP_SPEED_THRESH = 0.07
         TRAP_DIST_EPSILON = 1.0  # extra allowance beyond ball_radius
 
         if not ball.trapped and math.hypot(ball_dx, ball_dy) < TRAP_SPEED_THRESH:
