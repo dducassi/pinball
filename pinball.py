@@ -308,7 +308,7 @@ class Pinball:
             max_launch_speed=15
         )
 
-        # Background
+        # Load background
         if not test_mode:
             self.bg = pygame.image.load(os.path.join(base_dir, 'wizard.png')).convert()
             self.bg = pygame.transform.scale(self.bg,
@@ -321,6 +321,41 @@ class Pinball:
         else:
             self.bg = None
             self.lane_bg = None
+        
+        # Pre‑tint background for orb colors (custom hues)
+        self.bg_tinted = {}
+        if self.bg:
+            def tint_image(img, color):
+                tinted = img.copy()
+                color_surf = pygame.Surface(tinted.get_size(), pygame.SRCALPHA)
+                color_surf.fill(color)
+                tinted.blit(color_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                return tinted
+
+            # Custom colors for background
+            bg_blue = (30, 205, 255)    # soft cyan‑blue
+            bg_red  = (255, 100, 20)     # bright, orangey ed
+            bg_white = (255, 255, 255)  # white (can adjust slightly)
+
+            self.bg_tinted[self.settings.blu] = tint_image(self.bg, bg_blue)
+            self.bg_tinted[self.settings.red] = tint_image(self.bg, bg_red)
+            self.bg_tinted[self.settings.wht] = tint_image(self.bg, bg_white)
+
+            self.current_bg = self.bg_tinted[self.settings.wht]   # start with white
+        else:
+            self.current_bg = None
+         # Overlay surfaces (semi‑transparent tint)
+        self.overlay_tinted = {}
+        if self.bg:
+            overlay_blue = self._make_overlay((10, 15, 255), 25) # Pure Blue Light
+            overlay_red  = self._make_overlay((255, 15, 15), 25) # Pure Red Light
+            overlay_white = self._make_overlay((255, 255, 255), 0)
+            self.overlay_tinted[self.settings.blu] = overlay_blue
+            self.overlay_tinted[self.settings.red] = overlay_red
+            self.overlay_tinted[self.settings.wht] = overlay_white
+            self.current_overlay = self.overlay_tinted[self.settings.wht]
+        else:
+            self.current_overlay = None
 
         self.ball_save_active = False
         self.ball_save_start_time = 0
@@ -434,7 +469,15 @@ class Pinball:
             text = font.render(option, True, color)
             text_rect = text.get_rect(center=(self.settings.screen_width // 2, start_y + i * 35))
             self.screen.blit(text, text_rect)
-        
+
+
+    # Color Tint overlays
+    def _make_overlay(self, color, alpha=30):
+        """Create a semi‑transparent surface of playfield size with given color."""
+        surf = pygame.Surface((self.settings.playfield_width, self.settings.playfield_height), pygame.SRCALPHA)
+        surf.fill(color + (alpha,))
+        return surf
+    
     # Game loop
     def run_game(self):
         clock = pygame.time.Clock()
@@ -484,9 +527,13 @@ class Pinball:
             elif event.key == pygame.K_RETURN:
                 self._select_menu_option()
             elif event.key == pygame.K_ESCAPE:
-                pygame.quit()
-                sys.exit()
-
+                if self.resume_game:
+                    # Resume game
+                    self.resume_game = False
+                    self._set_state(GameState.PLAYING)
+                else:
+                    pygame.quit()
+                    sys.exit()
     def _select_menu_option(self):
         option = self.menu_options[self.selected_option]
         if option == 'START GAME':
@@ -644,6 +691,12 @@ class Pinball:
         for light in self.lights:
             light.reset(self.settings.wht)
 
+        # Reset background tint and overlay
+        if self.bg_tinted:
+            self.current_bg = self.bg_tinted.get(self.settings.wht, self.bg)
+        if self.overlay_tinted:
+            self.current_overlay = self.overlay_tinted.get(self.settings.wht, self.overlay_tinted[self.settings.wht])
+
     def _update_messages(self):
         if self.state == GameState.MENU:
             self.main_message = "CAST A SPELL!"
@@ -772,19 +825,25 @@ class Pinball:
             self.temp_message_time = pygame.time.get_ticks()
 
     def on_large_bumper_hit(self, color):
-        """Set all bumpers to the given color."""
         for bumper in self.bumpers:
             bumper.color = color
-        # Also update lights to match (optional)
         for light in self.lights:
             light.set_color(color)
+        # Update background tint
+        if self.bg_tinted:
+            self.current_bg = self.bg_tinted.get(color, self.bg)
+        # Update overlay
+        if self.overlay_tinted:
+            self.current_overlay = self.overlay_tinted.get(color, self.overlay_tinted[self.settings.wht])
 
     # Drawing
     def _draw(self):
         self.screen.fill((0, 0, 0))
-        # Playfield background
-        if self.bg:
-            self.screen.blit(self.bg, (0, self.playfield_y))
+         # Draw playfield background
+        if self.current_bg:
+            self.screen.blit(self.current_bg, (0, self.playfield_y))
+        
+        # Draw lane background (right side)
         if self.lane_bg:
             self.screen.blit(self.lane_bg, (self.settings.playfield_width, self.playfield_y))
         
@@ -799,6 +858,9 @@ class Pinball:
         self.draw_blocks()
         self.fl.draw(self.screen)
         self.fr.draw(self.screen)
+        # Draw overlay (semi‑transparent tint)
+        if self.current_overlay:
+            self.screen.blit(self.current_overlay, (0, self.playfield_y))
        
 
         # Title
@@ -936,6 +998,7 @@ class Pinball:
         score_rect = score_text.get_rect(center=(self.settings.screen_width // 2,
                                                   self.settings.top_margin // 2 + 130))
         self.screen.blit(score_text, score_rect)
+    
     
     
     # Test mode
