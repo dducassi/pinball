@@ -66,15 +66,15 @@ class Pinball:
         # Load background music
         self.music_loaded = False
         self.music_playing = True
+        self.effects_enabled = True
         self.original_music_volume = self.settings.music_volume 
-        self.sound_enabled = True   # global sound toggle
         
         if self.music_playing == True:
             try:
                 # Use a suitable format (OGG recommended)
                 music_path = os.path.join(base_dir, 'music.mid')
                 pygame.mixer.music.load(music_path)
-                pygame.mixer.music.set_volume(self.settings.music_volume)
+                pygame.mixer.music.set_volume(self.original_music_volume)
                 pygame.mixer.music.play(-1)   # loop indefinitely
                 self.music_loaded = True
                 print("Background music loaded and playing.")
@@ -94,8 +94,6 @@ class Pinball:
         self.selected_option = 0
         self.show_credits = False
         self.show_high_scores = False
-        self.credits_text = [ ... ]   # as before
-        self.sound_enabled = True   # global sound toggle
         self.high_scores = self.load_high_scores()
         self.high_score = self.high_scores[0][0] if self.high_scores else 0
         self.new_high_score_achieved = False
@@ -544,12 +542,6 @@ class Pinball:
         elif option == 'AUDIO':
             self.audio_submenu = True
             self.audio_selected = 0
-            self.temp_message = "SOUND ON" if self.sound_enabled else "SOUND OFF"
-            self.temp_message_time = pygame.time.get_ticks()
-            if self.sound_enabled:
-                self.sound_manager.enable_sound()
-            else:
-                self.sound_manager.disable_sound()
         elif option == 'VIDEO':
             self.temp_message = "COMING SOON!"
             self.temp_message_time = pygame.time.get_ticks()
@@ -579,35 +571,39 @@ class Pinball:
                     self.entry_name += event.unicode.upper()
 
     def _handle_audio_submenu_event(self, event):
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                self.audio_selected = (self.audio_selected - 1) % len(self.audio_options)
-            elif event.key == pygame.K_DOWN:
-                self.audio_selected = (self.audio_selected + 1) % len(self.audio_options)
-            elif event.key == pygame.K_RETURN:
-                option = self.audio_options[self.audio_selected]
-                if option == 'SOUND EFFECTS':
-                    self.sound_enabled = not self.sound_enabled
-                    if self.sound_enabled:
-                        self.sound_manager.enable_sound()
-                    else:
-                        self.sound_manager.disable_sound()
-                    self.temp_message = "SOUND ON" if self.sound_enabled else "SOUND OFF"
-                    self.temp_message_time = pygame.time.get_ticks()
-                elif option == 'MUSIC':
-                    self.music_playing = not self.music_playing
-                    if self.music_playing:
-                        pygame.mixer.music.set_volume(self.original_music_volume)
-                        if not pygame.mixer.music.get_busy():
-                            pygame.mixer.music.play(-1)
-                    else:
-                        pygame.mixer.music.set_volume(0)
-                    self.temp_message = "MUSIC ON" if self.music_playing else "MUSIC OFF"
-                    self.temp_message_time = pygame.time.get_ticks()
-                elif option == 'BACK':
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    self.audio_selected = (self.audio_selected - 1) % len(self.audio_options)
+                elif event.key == pygame.K_DOWN:
+                    self.audio_selected = (self.audio_selected + 1) % len(self.audio_options)
+                elif event.key == pygame.K_RETURN:
+                    option = self.audio_options[self.audio_selected]
+                    if option == 'SOUND EFFECTS':
+                        if self.sound_manager.effects_enabled:
+                            self.sound_manager.disable_effects()
+                        else:
+                            self.sound_manager.enable_effects()
+                        self.temp_message = "SOUND ON" if self.sound_manager.effects_enabled else "SOUND OFF"
+                        self.temp_message_time = pygame.time.get_ticks()
+                        print("Sound effects:", self.sound_manager.effects_enabled)
+                        print("Music playing:", self.music_playing)
+                    elif option == 'MUSIC':
+                        if not self.music_loaded:
+                            self.temp_message = "MUSIC NOT AVAILABLE"
+                            self.temp_message_time = pygame.time.get_ticks()
+                        else:
+                            self.music_playing = not self.music_playing
+                            if self.music_playing:
+                                pygame.mixer.music.set_volume(self.original_music_volume)
+                                pygame.mixer.music.play(-1)
+                            else:
+                                pygame.mixer.music.stop()
+                            self.temp_message = "MUSIC ON" if self.music_playing else "MUSIC OFF"
+                            self.temp_message_time = pygame.time.get_ticks()
+                    elif option == 'BACK':
+                        self.audio_submenu = False
+                elif event.key == pygame.K_ESCAPE:
                     self.audio_submenu = False
-            elif event.key == pygame.K_ESCAPE:
-                self.audio_submenu = False
 
     def _handle_game_over_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -707,6 +703,8 @@ class Pinball:
         elif self.state == GameState.GAME_OVER:
             self.main_message = "GAME OVER"
             self.secondary_message = "'ENTER' TO INSERT COIN"
+            self.music_playing = False
+
         else:  # PLAYING
             self.main_message = ""
             self.secondary_message = ""
@@ -726,9 +724,6 @@ class Pinball:
         self.new_high_score_achieved = False
         self.entry_name = ""
         self.entry_score = 0
-        if self.music_loaded:
-            pygame.mixer.music.stop()
-            pygame.mixer.music.play(-1)
 
     # Physics update
     def _update(self):
@@ -783,10 +778,7 @@ class Pinball:
                          self._set_state(GameState.NAME_ENTRY)
                      else:
                          self._set_state(GameState.GAME_OVER)
-                     winsound.Beep(640, 200)
-                     winsound.Beep(440, 200)
-                     winsound.Beep(640, 200)
-                     winsound.Beep(440, 200)
+                
 
             # Update lights
             for light in self.lights:
