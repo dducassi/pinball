@@ -7,6 +7,7 @@ class SoundManager:
         self.notification_center = notification_center
         self.base_dir = base_dir
         self.muted = False
+        self.music_playing = True
         self._load_sounds()
         self._register_observers()
 
@@ -50,6 +51,7 @@ class SoundManager:
 
     def disable_sound(self):
         self.muted = True
+        self.music_playing = False
 
     def on_bumper_hit(self, bumper):
         if self.muted:
