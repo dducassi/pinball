@@ -65,17 +65,21 @@ class Pinball:
         self.playfield_y = self.settings.top_margin
         # Load background music
         self.music_loaded = False
+        self.music_playing = True
+        self.original_music_volume = self.settings.music_volume 
         self.sound_enabled = True   # global sound toggle
-        try:
-            # Use a suitable format (OGG recommended)
-            music_path = os.path.join(base_dir, 'music.mid')
-            pygame.mixer.music.load(music_path)
-            pygame.mixer.music.set_volume(self.settings.music_volume)
-            pygame.mixer.music.play(-1)   # loop indefinitely
-            self.music_loaded = True
-            print("Background music loaded and playing.")
-        except Exception as e:
-            print(f"Background music not loaded: {e}")
+        
+        if self.music_playing == True:
+            try:
+                # Use a suitable format (OGG recommended)
+                music_path = os.path.join(base_dir, 'music.mid')
+                pygame.mixer.music.load(music_path)
+                pygame.mixer.music.set_volume(self.settings.music_volume)
+                pygame.mixer.music.play(-1)   # loop indefinitely
+                self.music_loaded = True
+                print("Background music loaded and playing.")
+            except Exception as e:
+                print(f"Background music not loaded: {e}")
 
       
 
@@ -86,7 +90,7 @@ class Pinball:
         
 
         # Menu system
-        self.menu_options = ['Start Game', 'High Scores', 'Table Selector', 'Audio', 'Video', 'Credits', 'Exit']
+        self.menu_options = ['START GAME', 'HIGH SCORES', 'TABLE SELECTOR', 'AUDIO', 'VIDEO', 'CREDITS', 'EXIT']
         self.selected_option = 0
         self.show_credits = False
         self.show_high_scores = False
@@ -112,7 +116,7 @@ class Pinball:
             "Thanks for playing!"
         ]
         self.audio_submenu = False
-        self.audio_options = ['Sound Effects', 'Music', 'Back']
+        self.audio_options = ['SOUND EFFECTS', 'MUSIC', 'BACK']
         self.audio_selected = 0
         self.resume_game = False
         self.entry_name = ""
@@ -324,9 +328,9 @@ class Pinball:
 
     def _update_menu_options(self):
         if self.resume_game:
-            self.menu_options = ['Resume Game', 'High Scores', 'Table Selector', 'Audio', 'Video', 'Credits', 'Exit']
+            self.menu_options = ['RESUME GAME', 'HIGH SCORES', 'TABLE SELECTOR', 'AUDIO', 'VIDEO', 'CREDITS', 'EXIT']
         else:
-            self.menu_options = ['Start Game', 'High Scores', 'Table Selector', 'Audio', 'Video', 'Credits', 'Exit']
+            self.menu_options = ['START GAME', 'HIGH SCORES', 'TABLE SELECTOR', 'AUDIO', 'VIDEO', 'CREDITS', 'EXIT']
         # Reset selected option to avoid index errors
         if self.selected_option >= len(self.menu_options):
             self.selected_option = 0
@@ -413,6 +417,23 @@ class Pinball:
         prompt = prompt_font.render("Press ESC to return", True, self.settings.wht)
         prompt_rect = prompt.get_rect(center=(self.settings.screen_width // 2, start_y + len(self.credits_text) * 20 + 30))
         self.screen.blit(prompt, prompt_rect)
+    
+    def _draw_audio_submenu(self):
+        overlay = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        self.screen.blit(overlay, (0, 0))
+
+        try:
+            font = pygame.font.Font(font_path, 13)
+        except:
+            font = pygame.font.Font(None, 24)
+
+        start_y = self.settings.screen_height // 2
+        for i, option in enumerate(self.audio_options):
+            color = self.settings.wht if i != self.audio_selected else self.settings.red
+            text = font.render(option, True, color)
+            text_rect = text.get_rect(center=(self.settings.screen_width // 2, start_y + i * 35))
+            self.screen.blit(text, text_rect)
         
     # Game loop
     def run_game(self):
@@ -442,6 +463,11 @@ class Pinball:
                 self._handle_name_entry_event(event)
 
     def _handle_menu_event(self, event):
+        # Audio submenu takes precedence
+        if self.audio_submenu:
+            self._handle_audio_submenu_event(event)
+            return
+
         # Handle sub‑screens (credits, high scores)
         if self.show_credits or self.show_high_scores:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -463,30 +489,31 @@ class Pinball:
 
     def _select_menu_option(self):
         option = self.menu_options[self.selected_option]
-        if option == 'Start Game':
+        if option == 'START GAME':
             self._start_game()
-        elif option == 'Table Selector':
-            self.temp_message = "Coming soon!"
+        elif option == 'TABLE SELECTOR':
+            self.temp_message = "COMING SOON!"
             self.temp_message_time = pygame.time.get_ticks()
-        elif option == 'Audio':
-            self.sound_enabled = not self.sound_enabled
-            self.temp_message = "Sound ON" if self.sound_enabled else "Sound OFF"
+        elif option == 'AUDIO':
+            self.audio_submenu = True
+            self.audio_selected = 0
+            self.temp_message = "SOUND ON" if self.sound_enabled else "SOUND OFF"
             self.temp_message_time = pygame.time.get_ticks()
             if self.sound_enabled:
                 self.sound_manager.enable_sound()
             else:
                 self.sound_manager.disable_sound()
-        elif option == 'Video':
-            self.temp_message = "Coming soon!"
+        elif option == 'VIDEO':
+            self.temp_message = "COMING SOON!"
             self.temp_message_time = pygame.time.get_ticks()
-        elif option == 'Credits':
+        elif option == 'CREDITS':
             self.show_credits = True
-        elif option == 'Exit':
+        elif option == 'EXIT':
             pygame.quit()
             sys.exit()
-        elif option == 'High Scores':
+        elif option == 'HIGH SCORES':
             self.show_high_scores = True
-        elif option == 'Resume Game':
+        elif option == 'RESUME GAME':
             self.resume_game = False
             self._set_state(GameState.PLAYING)
 
@@ -503,6 +530,37 @@ class Pinball:
                 # Accept letters and digits, convert to uppercase
                 if event.unicode.isalpha() or event.unicode.isdigit():
                     self.entry_name += event.unicode.upper()
+
+    def _handle_audio_submenu_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self.audio_selected = (self.audio_selected - 1) % len(self.audio_options)
+            elif event.key == pygame.K_DOWN:
+                self.audio_selected = (self.audio_selected + 1) % len(self.audio_options)
+            elif event.key == pygame.K_RETURN:
+                option = self.audio_options[self.audio_selected]
+                if option == 'SOUND EFFECTS':
+                    self.sound_enabled = not self.sound_enabled
+                    if self.sound_enabled:
+                        self.sound_manager.enable_sound()
+                    else:
+                        self.sound_manager.disable_sound()
+                    self.temp_message = "SOUND ON" if self.sound_enabled else "SOUND OFF"
+                    self.temp_message_time = pygame.time.get_ticks()
+                elif option == 'MUSIC':
+                    self.music_playing = not self.music_playing
+                    if self.music_playing:
+                        pygame.mixer.music.set_volume(self.original_music_volume)
+                        if not pygame.mixer.music.get_busy():
+                            pygame.mixer.music.play(-1)
+                    else:
+                        pygame.mixer.music.set_volume(0)
+                    self.temp_message = "MUSIC ON" if self.music_playing else "MUSIC OFF"
+                    self.temp_message_time = pygame.time.get_ticks()
+                elif option == 'BACK':
+                    self.audio_submenu = False
+            elif event.key == pygame.K_ESCAPE:
+                self.audio_submenu = False
 
     def _handle_game_over_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -796,6 +854,10 @@ class Pinball:
             self._draw_high_scores()
         if self.state == GameState.NAME_ENTRY:
             self._draw_name_entry()
+        
+        # Draw audio submenu
+        if self.state == GameState.MENU and self.audio_submenu:
+            self._draw_audio_submenu()
 
         pygame.display.flip()
 
