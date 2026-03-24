@@ -102,10 +102,10 @@ class Pinball:
             "Design & Programming: Daniel Ducassi",
             "",
             "Music: 'In the Hall of the Mountain King'",
-            "by Edvard Grieg"
+            "by Edvard Grieg",
             "",
             "Graphics: Daniel Ducassi",
-            ","
+            "",
             "Audio: Daniel Ducassi and Nazli Koca"
             "",
             "",
@@ -115,6 +115,8 @@ class Pinball:
         self.audio_options = ['Sound Effects', 'Music', 'Back']
         self.audio_selected = 0
         self.resume_game = False
+        self.entry_name = ""
+        self.entry_score = 0
         
 
         # Temporary message system
@@ -342,19 +344,15 @@ class Pinball:
         scores.sort(key=lambda x: x[0], reverse=True)
         return scores[:5]
 
-    def save_high_score(self, score):
-        """Insert score into list, keep top 5, save to file, and update top display."""
-        from datetime import datetime
-        date_str = datetime.now().strftime('%Y-%m-%d')
-        self.high_scores.append((score, date_str))
+    def save_high_score(self, score, name):
+        self.high_scores.append((score, name))
         self.high_scores.sort(key=lambda x: x[0], reverse=True)
         self.high_scores = self.high_scores[:5]
-        # Update the displayed high score
         self.high_score = self.high_scores[0][0] if self.high_scores else 0
         try:
             with open('highscores.txt', 'w') as f:
-                for s, d in self.high_scores:
-                    f.write(f"{s},{d}\n")
+                for s, n in self.high_scores:
+                    f.write(f"{s},{n}\n")
         except:
             pass
 
@@ -364,15 +362,14 @@ class Pinball:
         except:
             font = pygame.font.Font(None, 24)
         start_y = self.settings.top_margin // 2 + 50
-        for i, (score, date) in enumerate(self.high_scores):
-            text = font.render(f"{i+1}. {score:,}  ({date})", True, self.settings.wht)
+        for i, (score, name) in enumerate(self.high_scores):
+            text = font.render(f"{i+1}. {score:,}  {name}", True, self.settings.wht)
             text_rect = text.get_rect(center=(self.settings.screen_width // 2, start_y + i * 25))
             self.screen.blit(text, text_rect)
         prompt_font = pygame.font.Font(font_path, 8) if font_path else pygame.font.Font(None, 16)
         prompt = prompt_font.render("Press ESC to return", True, self.settings.wht)
         prompt_rect = prompt.get_rect(center=(self.settings.screen_width // 2, start_y + len(self.high_scores) * 25 + 30))
         self.screen.blit(prompt, prompt_rect)
-
     
     def on_score_changed(self, score):
      # Draw high score, but don't save it yet
@@ -440,9 +437,9 @@ class Pinball:
                 self._handle_paused_event(event)
             elif self.state == GameState.GAME_OVER:
                 self._handle_game_over_event(event)
-            elif event.key == pygame.K_ESCAPE:
-                self.resume_game = True
-                self._set_state(GameState.MENU)
+            
+            elif self.state == GameState.NAME_ENTRY:
+                self._handle_name_entry_event(event)
 
     def _handle_menu_event(self, event):
         # Handle sub‑screens (credits, high scores)
@@ -493,9 +490,26 @@ class Pinball:
             self.resume_game = False
             self._set_state(GameState.PLAYING)
 
+    def _handle_name_entry_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN and self.entry_name:
+                self.save_high_score(self.entry_score, self.entry_name.upper())
+                self._set_state(GameState.MENU)
+                self.entry_name = ""
+                self.entry_score = 0
+            elif event.key == pygame.K_BACKSPACE:
+                self.entry_name = self.entry_name[:-1]
+            elif len(self.entry_name) < 3:
+                # Accept letters and digits, convert to uppercase
+                if event.unicode.isalpha() or event.unicode.isdigit():
+                    self.entry_name += event.unicode.upper()
+
     def _handle_game_over_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            self._start_game()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                self._start_game()
+            elif event.key == pygame.K_ESCAPE:
+                self._set_state(GameState.MENU)
 
     def _handle_playing_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -544,8 +558,12 @@ class Pinball:
                     
                     
     def _handle_paused_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
-            self._set_state(GameState.PLAYING)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_p:
+                self._set_state(GameState.PLAYING)
+            elif event.key == pygame.K_ESCAPE:
+                self.resume_game = True
+                self._set_state(GameState.MENU)
 
     # State management
     def _set_state(self, new_state):
@@ -595,6 +613,8 @@ class Pinball:
         self.lives = 3
         self.ball_save_active = False
         self.new_high_score_achieved = False
+        self.entry_name = ""
+        self.entry_score = 0
         if self.music_loaded:
             pygame.mixer.music.stop()
             pygame.mixer.music.play(-1)
@@ -645,13 +665,17 @@ class Pinball:
                      self.b.trapped = False
                      
                  else:
-                  self._set_state(GameState.GAME_OVER)
-                  if self.new_high_score_achieved:
-                      self.save_high_score(self.score_manager.score)
-                  winsound.Beep(640, 200)
-                  winsound.Beep(440, 200)
-                  winsound.Beep(640, 200)
-                  winsound.Beep(440, 200)
+                     # Check if score qualifies for high score list
+                     if (len(self.high_scores) < 5 or self.score_manager.score > min(s for s,_ in self.high_scores)):
+                         self.entry_score = self.score_manager.score
+                         self.entry_name = ""
+                         self._set_state(GameState.NAME_ENTRY)
+                     else:
+                         self._set_state(GameState.GAME_OVER)
+                     winsound.Beep(640, 200)
+                     winsound.Beep(440, 200)
+                     winsound.Beep(640, 200)
+                     winsound.Beep(440, 200)
 
             # Update lights
             for light in self.lights:
@@ -705,11 +729,6 @@ class Pinball:
             self.screen.blit(self.bg, (0, self.playfield_y))
         if self.lane_bg:
             self.screen.blit(self.lane_bg, (self.settings.playfield_width, self.playfield_y))
-        
-       
-
-
-
         
 
         # Game elements
@@ -775,6 +794,8 @@ class Pinball:
             overlay.fill((0, 0, 0, 180))
             self.screen.blit(overlay, (0, 0))
             self._draw_high_scores()
+        if self.state == GameState.NAME_ENTRY:
+            self._draw_name_entry()
 
         pygame.display.flip()
 
@@ -817,7 +838,42 @@ class Pinball:
         
         if self.state == GameState.MENU and not self.show_credits:
             self._draw_menu_options()
+    
+    def _draw_name_entry(self):
+        overlay = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        self.screen.blit(overlay, (0, 0))
 
+        try:
+            font = pygame.font.Font(font_path, 14)
+            small_font = pygame.font.Font(font_path, 12)
+        except:
+            font = pygame.font.Font(None, 24)
+            small_font = pygame.font.Font(None, 20)
+
+        # "NEW HIGH SCORE!" title
+        prompt = font.render("NEW HIGH SCORE!", True, self.settings.wht)
+        prompt_rect = prompt.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 2))
+        self.screen.blit(prompt, prompt_rect)
+
+        # Static instruction
+        instruction = small_font.render("ENTER YOUR NAME:", True, self.settings.wht)
+        inst_rect = instruction.get_rect(center=(self.settings.screen_width // 2,
+                                                 self.settings.top_margin // 2 + 50))
+        self.screen.blit(instruction, inst_rect)
+
+        # Display the entered name (uppercase) on a new line
+        name_display = self.entry_name.upper() + ("_" if (pygame.time.get_ticks() // 500) % 2 == 0 else " ")
+        name_text = small_font.render(name_display, True, self.settings.wht)
+        name_rect = name_text.get_rect(center=(self.settings.screen_width // 2,
+                                                self.settings.top_margin // 2 + 85))
+        self.screen.blit(name_text, name_rect)
+
+        # Display the score
+        score_text = small_font.render(f"SCORE: {self.entry_score:,}", True, self.settings.wht)
+        score_rect = score_text.get_rect(center=(self.settings.screen_width // 2,
+                                                  self.settings.top_margin // 2 + 130))
+        self.screen.blit(score_text, score_rect)
     
     
     # Test mode
