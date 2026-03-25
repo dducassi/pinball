@@ -72,7 +72,7 @@ class Pinball:
         if self.music_playing == True:
             try:
                 # Use a suitable format (OGG recommended)
-                music_path = os.path.join(base_dir, 'music.mid')
+                music_path = os.path.join(base_dir, 'music.wav')
                 pygame.mixer.music.load(music_path)
                 pygame.mixer.music.set_volume(self.original_music_volume)
                 pygame.mixer.music.play(-1)   # loop indefinitely
