@@ -18,6 +18,7 @@ from table_builder import TableBuilder
 from notification_center import NotificationCenter
 from score_manager import ScoreManager
 from sound_manager import SoundManager
+from time import sleep
 import winsound
 
 
@@ -72,7 +73,7 @@ class Pinball:
         if self.music_playing == True:
             try:
                 # Use a suitable format (OGG recommended)
-                music_path = os.path.join(base_dir, 'music.wav')
+                music_path = os.path.join(base_dir, 'music.ogg')
                 pygame.mixer.music.load(music_path)
                 pygame.mixer.music.set_volume(self.original_music_volume)
                 pygame.mixer.music.play(-1)   # loop indefinitely
@@ -103,12 +104,13 @@ class Pinball:
             "",
             "Design & Programming: Daniel Ducassi",
             "",
-            "Music: 'In the Hall of the Mountain King'",
-            "by Edvard Grieg",
-            "",
             "Graphics: Daniel Ducassi",
             "",
-            "Audio: Daniel Ducassi and Nazli Koca"
+            "Audio: Daniel Ducassi",
+            "",
+            "Music: 'In the Hall of the Mountain King'",
+            "Edvard Grieg,",
+            "Arrangement: The University Society, 1918",
             "",
             "",
             "Thanks for playing!"
@@ -770,7 +772,9 @@ class Pinball:
                      self.b.reset()
                      self.b.trapped = False
                      
+                     
                  else:
+                     self.notification_center.post_notification('game_over')
                      # Check if score qualifies for high score list
                      if (len(self.high_scores) < 5 or self.score_manager.score > min(s for s,_ in self.high_scores)):
                          self.entry_score = self.score_manager.score
@@ -778,6 +782,7 @@ class Pinball:
                          self._set_state(GameState.NAME_ENTRY)
                      else:
                          self._set_state(GameState.GAME_OVER)
+                         
                 
 
             # Update lights
