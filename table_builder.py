@@ -69,35 +69,35 @@ class TableBuilder:
         x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4) - (0.18 * self.settings.lane_wall_thickness)
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 16
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
         lights.append(Light(x, y, 18, color, light_image))
 
         # Lower right bumper (small orb)
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 16
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
         lights.append(Light(x, y, 18, color, light_image))
 
         # Wizard's chest
         x = self.playfield_width // 2
         y = self.playfield_height / 2 + self.top_margin - 55
         bump_rad = 8
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
         lights.append(Light(x, y, 10.5, color, light_image))
 
         # Wizard left
         x = self.playfield_width // 2 - 20
         y = self.playfield_height / 2 + self.top_margin - 107
         bump_rad = 5.5
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
         lights.append(Light(x, y, 8, color, light_image))
 
         # Wizard right
         x = self.playfield_width // 2 + 20
         y = self.playfield_height / 2 + self.top_margin - 107
         bump_rad = 5.5
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, small_orb_image))
+        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
         lights.append(Light(x, y, 8, color, light_image))
 
         return bumpers, lights
