@@ -14,7 +14,15 @@ class OneWayBlock(Block):
             return new_x, new_y, new_dx, new_dy, False
 
         # Allow passage only when moving left (exiting lane)
-        if self.direction == 'left' and ball_dx < 0:
-            return ball_x, ball_y, ball_dx, ball_dy, False
-        else:
-            return new_x, new_y, new_dx, new_dy, True
+        if self.direction == 'left':
+            if ball_dx < 0:
+                return ball_x, ball_y, ball_dx, ball_dy, False
+            else:
+                return new_x, new_y, new_dx, new_dy, True
+        
+        # Allow passage only when moving down (Bottom wall)
+        if self.direction == 'down':
+            if ball_dy > 0:
+                return ball_x, ball_y, ball_dx, ball_dy, False
+            else:
+                return new_x, new_y, new_dx, new_dy, True
