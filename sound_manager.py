@@ -21,21 +21,25 @@ class SoundManager:
         except:
             self.flipper_sound = None
         try:
-            self.launch_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'launch.wav'))
+            self.launch_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'launch.ogg'))
         except:
             self.launch_sound = None
         try:
-            self.ball_lost_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'ball_lost.wav'))
+            self.ball_lost_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'ball_lost.ogg'))
         except:
             self.ball_lost_sound = None
         try:
-            self.save_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'save.wav'))
+            self.save_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'ball_save.ogg'))
         except:
             self.save_sound = None
         try:
             self.block_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'block_sound.wav'))
         except:
             self.block_sound = None
+        try:
+            self.game_over_sound = pygame.mixer.Sound(os.path.join(self.base_dir, 'game_over_sound.ogg'))
+        except:
+            self.game_over_sound = None
 
     def _register_observers(self):
         self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
@@ -44,6 +48,7 @@ class SoundManager:
         self.notification_center.add_observer('ball_lost', self.on_ball_lost)
         self.notification_center.add_observer('ball_saved', self.on_ball_saved)
         self.notification_center.add_observer('block_hit', self.on_block_hit)
+        self.notification_center.add_observer('game_over', self.on_game_over)
 
     # Toggle Effects
 
@@ -92,5 +97,10 @@ class SoundManager:
             return
         if self.block_sound:
             self.block_sound.play()
-        else:
-            pass
+    
+    def on_game_over(self, data=None):
+        if not self.effects_enabled:
+            return
+        if self.game_over_sound:
+            self.game_over_sound.play()
+    
