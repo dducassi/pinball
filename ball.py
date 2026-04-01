@@ -22,6 +22,7 @@ class Ball:
         self.launched = False
         self.trapped = False
         self.lost = False
+        self.resting = False
         self.image = image
         if image:
             size = int(self.settings.br * 2)
@@ -53,6 +54,7 @@ class Ball:
         self.launched = False
         self.trapped = False
         self.lost = False
+        self.resting = False
 
     def move(self):
         if self.trapped or not self.launched:
