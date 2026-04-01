@@ -186,4 +186,4 @@ class Block:
                         oy = -perp_y * d * 0.5
                         start = (s1[0] + ox, s1[1] + oy)
                         end = (s2[0] + ox, s2[1] + oy)
-                        pygame.draw.line(screen, color, start, end, 1)
+                        pygame.draw.line(screen, color, start, end,2)
