@@ -60,11 +60,14 @@ class Ball:
         if self.trapped or not self.launched:
             return
 
-        # Friction (from original)
-        self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
+        # Friction
+        if self.dy < 0:
+            self.dy += (0.0008 * abs(self.dy)) / self.settings.phys_runs
+        if self.dy > 0:
+            self.dy -= (0.0008 * abs(self.dy)) / self.settings.phys_runs
         if self.dx > 0:
             self.dx -= (0.00027 * abs(self.dy)) / self.settings.phys_runs
-        elif self.dx < 0:
+        if self.dx < 0:
             self.dx += (0.00027 * abs(self.dy)) / self.settings.phys_runs
 
         # Gravity
@@ -77,10 +80,6 @@ class Ball:
             scale = self.settings.bsmax / speed
             self.dx *= scale
             self.dy *= scale
-
-        max_dy = 40
-        if abs(self.dy) > max_dy:
-            print(f"!!! Abnormal dy detected: {self.dy}.")
 
         self.x += self.dx
         self.y += self.dy
