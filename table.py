@@ -9,7 +9,10 @@ import math
 from abc import ABC, abstractmethod
 
 class Table:
-    def __init__(self, name, builder_class, title, tagline, music_path=None, bg_path=None, lane_bg_path=None, use_ball_image=True):
+    def __init__(self, name, builder_class, title, tagline, music_path=None,
+                 bg_path=None, lane_bg_path=None, use_ball_image=True,
+                 small_bumper_messages=None, large_bumper_messages=None,
+                 color_cycle=None, tint_background=True):
         self.name = name
         self.builder_class = builder_class
         self.title = title
@@ -18,6 +21,11 @@ class Table:
         self.bg_path = bg_path
         self.lane_bg_path = lane_bg_path
         self.use_ball_image = use_ball_image
+        self.small_bumper_messages = small_bumper_messages or ["BUMPER!"]
+        self.large_bumper_messages = large_bumper_messages or {}
+        self.color_cycle = color_cycle  # e.g., ['wht', 'blu', 'red']
+        self.tint_background = tint_background
+
 
 class TableManager:
     def __init__(self, settings, base_dir):
@@ -28,26 +36,43 @@ class TableManager:
         self._register_tables()
 
     def _register_tables(self):
+
         # Wizard table
         self.tables.append(Table(
             name="WIZARD'S TOWER",
-            builder_class=WizardTableBuilder,   # store class, not function
+            builder_class=WizardTableBuilder,
             title="THE WIZARD'S TOWER",
             tagline="CAST A SPELL!",
             music_path=os.path.join(self.base_dir, 'music.ogg'),
             bg_path=os.path.join(self.base_dir, 'wizard.png'),
-            lane_bg_path=os.path.join(self.base_dir, 'lane_bg.png')
+            lane_bg_path=os.path.join(self.base_dir, 'lane_bg.png'),
+            large_bumper_messages={
+                self.settings.blu: "ORB OF POWER!",
+                self.settings.red: "FIREBALL!",
+                self.settings.wht: "BALL LIGHTNING!"
+            },
+            small_bumper_messages = ["BOOM!", "HISS!", "POP!", "ZAP!", "BUZZ!"],
+            color_cycle=[self.settings.wht, self.settings.blu, self.settings.red],
+            tint_background=True
         ))
+
         # Minimalist table
         self.tables.append(Table(
-            name="THE MINIMALIST",
-            builder_class=MinimalistTableBuilder,
-            title="THE MINIMALIST",
-            tagline="START GAME",
-            music_path=None,
-            bg_path=None,
-            lane_bg_path=None,
-            use_ball_image=False
+                name="THE MINIMALIST",
+                builder_class=MinimalistTableBuilder,
+                title="THE MINIMALIST",
+                tagline="START GAME",
+                music_path=None,
+                bg_path=None,
+                lane_bg_path=None,
+                use_ball_image=False,
+                large_bumper_messages={
+                    self.settings.blu: "BLUE!",
+                    self.settings.ylw: "YELLOW!",
+                    self.settings.red: "RED!"
+                },
+                color_cycle=None,   # no color cycling
+                tint_background=False
         ))
 
     def get_current_table(self):
@@ -523,41 +548,42 @@ class MinimalistTableBuilder(TableBuilderBase):
         small_orb_image = None
         tiny_bumper_image = None
         light_image = None
+
         # Main bumper
         x = self.playfield_width / 3
-        y = self.playfield_height / 5 + self.top_margin
-        bump_rad = 5 * self.settings.br
+        y = self.playfield_height / 6 + self.top_margin
+        bump_rad = 5.5 * self.settings.br
         color = self.settings.wht
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, bump_rad + 2, color, light_image))
+        bumpers.append(Bumper(x, y, self.settings.red, bump_rad, orb_image))
+        lights.append(Light(x, y, bump_rad + 2, self.settings.red, light_image))
 
         # Lower left bumper 
         x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4)
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 2 * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, 18, color, light_image))
+        lights.append(Light(x, y, bump_rad + 1, self.settings.wht, light_image))
 
         # Lower right bumper 
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 2  * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, 18, color, light_image))
+        lights.append(Light(x, y, bump_rad + 1, self.settings.wht, light_image))
 
         # Secondary main bumper
         x = 3 * self.playfield_width // 4
-        y = self.playfield_height / 2 + self.top_margin - 8 * self.settings.br
-        bump_rad = 5  * self.settings.br
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, 10.5, color, light_image))
+        y = self.playfield_height / 2 + self.top_margin - 9 * self.settings.br
+        bump_rad = 4.5  * self.settings.br
+        bumpers.append(Bumper(x, y, self.settings.blu, bump_rad, orb_image))
+        lights.append(Light(x, y, bump_rad + 2, self.settings.blu, light_image))
 
         # Tertiary bumper 
         x = self.playfield_width // 2 - 3  * self.settings.br
         y = self.playfield_height / 2 + self.top_margin
-        bump_rad = 3  * self.settings.br
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, 8, color, light_image))
+        bump_rad = 3.5  * self.settings.br
+        bumpers.append(Bumper(x, y, self.settings.ylw, bump_rad, orb_image))
+        lights.append(Light(x, y, bump_rad + 2, self.settings.ylw, light_image))
 
         return bumpers, lights
 
@@ -744,7 +770,7 @@ class MinimalistTableBuilder(TableBuilderBase):
             (self.screen_width, self.top_margin + self.settings.lane_wall_thickness),
             (self.screen_width, self.top_margin)
         ]
-        blocks.append(Block(top_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_horz))
+        blocks.append(Block(top_border_vertices, self.settings.slv, restitution=self.settings.restitution, image=self.edge_horz))
 
       
 
@@ -755,7 +781,7 @@ class MinimalistTableBuilder(TableBuilderBase):
             (self.settings.lane_wall_thickness, self.screen_height),
             (self.settings.lane_wall_thickness, 0)
         ]
-        blocks.append(Block(left_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_vert))
+        blocks.append(Block(left_border_vertices, self.settings.slv, restitution=self.settings.restitution, image=self.edge_vert))
 
         # Right border (full height)
         right_border_vertices = [
@@ -764,7 +790,7 @@ class MinimalistTableBuilder(TableBuilderBase):
             (self.screen_width, self.screen_height),
             (self.screen_width, 0)
         ]
-        blocks.append(Block(right_border_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_vert))
+        blocks.append(Block(right_border_vertices, self.settings.slv, restitution=self.settings.restitution, image=self.edge_vert))
         
 
 
@@ -783,7 +809,7 @@ class MinimalistTableBuilder(TableBuilderBase):
             (lane_left, lane_top + self.guide_height * 2),
             (lane_left, lane_bottom - 5)
         ]
-        blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_vert))
+        blocks.append(Block(left_wall_vertices, self.settings.slv, restitution=self.settings.restitution, image=self.edge_vert))
 
         left_wall_left_vertices = [
             (lane_left, lane_bottom - 5),
@@ -791,7 +817,7 @@ class MinimalistTableBuilder(TableBuilderBase):
             (lane_left + wall_thick, lane_top + self.guide_height * 2),
             (lane_left + wall_thick, lane_bottom - 5)
         ]
-        blocks.append(Block(left_wall_left_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_vert))
+        blocks.append(Block(left_wall_left_vertices, self.settings.slv, restitution=self.settings.restitution, image=self.edge_vert))
 
         # Left Lane wall cap
         left_wall_vertices = [
@@ -800,7 +826,7 @@ class MinimalistTableBuilder(TableBuilderBase):
             (lane_left + 7, lane_top + self.guide_height * 2 + 5),
             (lane_left - 7, lane_top + self.guide_height * 2 + 5),
         ]
-        blocks.append(Block(left_wall_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_horz))
+        blocks.append(Block(left_wall_vertices, self.settings.slv, restitution=self.settings.restitution, image=self.edge_horz))
 
         # Bottom wall (textured)
        
@@ -814,7 +840,7 @@ class MinimalistTableBuilder(TableBuilderBase):
             (self.screen_width, 8),
             (self.screen_width, 0)
         ]
-        blocks.append(Block(top_bar_vertices, (100,100,100), restitution=self.settings.restitution, image=self.edge_horz))
+        blocks.append(Block(top_bar_vertices, self.settings.slv, restitution=self.settings.restitution, image=self.edge_horz))
 
         
 
