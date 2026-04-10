@@ -672,19 +672,26 @@ class Pinball:
         for flipper in self.flippers:
             flipper.reset()
 
-        # Reset bumpers to initial color (blue)
-        for bumper in self.bumpers:
-            bumper.color = self.settings.wht
+        # Get the current table's starting color
+        current_table = self.table_manager.get_current_table()
+        if current_table.color_cycle and len(current_table.color_cycle) > 0:
+            initial_color = current_table.color_cycle[0]
+
+        # Reset bumpers to the initial color
+        if current_table.color_cycle:
+            for bumper in self.bumpers:
+                bumper.color = initial_color
 
         # Reset lights: turn off and set color to match bumpers' initial
-        for light in self.lights:
-            light.reset(self.settings.wht)
+        if current_table.color_cycle:
+            for light in self.lights:
+                light.reset(initial_color)
 
         # Reset background tint and overlay
         if self.bg_tinted:
-            self.current_bg = self.bg_tinted.get(self.settings.wht, self.bg)
+            self.current_bg = self.bg_tinted.get(initial_color, self.bg)
         if self.overlay_tinted:
-            self.current_overlay = self.overlay_tinted.get(self.settings.wht, self.overlay_tinted[self.settings.wht])
+            self.current_overlay = self.overlay_tinted.get(initial_color, self.overlay_tinted[self.settings.wht])
 
     def _update_messages(self):
         if self.state == GameState.MENU:
@@ -789,7 +796,20 @@ class Pinball:
         if self.state != GameState.PLAYING:
             return
 
-        # Update corresponding light's color and turn it on
+        current_table = self.table_manager.get_current_table()
+
+        # 1. Update the hit bumper's color (cycle if table has color_cycle)
+        new_color = None
+        if current_table.color_cycle and bumper.radius > 5:  # cycle only for bumpers that can change
+            # Cycle to next color in the table's list
+            if bumper.color in current_table.color_cycle:
+                idx = current_table.color_cycle.index(bumper.color)
+                new_color = current_table.color_cycle[(idx + 1) % len(current_table.color_cycle)]
+            else:
+                new_color = current_table.color_cycle[0]
+            bumper.color = new_color
+
+        # 2. Update the corresponding light's color and turn it on
         try:
             idx = self.bumpers.index(bumper)
             if idx < len(self.lights):
@@ -799,32 +819,39 @@ class Pinball:
         except ValueError:
             pass
 
-        # Generate message
-        msg = random.choice(["BOOM!", "HISS!", "POP!", "ZAP!", "BUZZ!"])
+        # 3. If it's a large bumper, notify all other bumpers to sync colors
+        if bumper.radius > 20 and new_color is not None:
+            self.notification_center.post_notification('large_bumper_hit', new_color)
+
+        # 4. Generate a temporary message (small or large)
+        msg = None
+        if bumper.radius > 20:
+            msg = current_table.large_bumper_messages.get(bumper.color)
+        else:
+            if current_table.small_bumper_messages:
+                msg = random.choice(current_table.small_bumper_messages)
         if msg:
             self.temp_message = msg
             self.temp_message_time = pygame.time.get_ticks()
 
     def on_large_bumper_hit(self, color):
-        if color == self.settings.blu:
-                msg = "ORB OF POWER!"
-        elif color == self.settings.red:
-                msg = "FIREBALL!"
-        elif color == self.settings.wht:
-                msg = "BALL LIGHTNING!"
-        else:
-            msg = ""
+        current_table = self.table_manager.get_current_table()
+        if not current_table.color_cycle:
+            return  # no cycling for this table
+
+        # Propagate the new color to all bumpers and lights
         for bumper in self.bumpers:
             bumper.color = color
         for light in self.lights:
             light.set_color(color)
-        # Update background tint
-        if self.bg_tinted:
+
+        # Update background tint and overlay if enabled
+        if current_table.tint_background and self.bg_tinted:
             self.current_bg = self.bg_tinted.get(color, self.bg)
-        # Update overlay
-        if self.overlay_tinted:
+        if current_table.tint_background and self.overlay_tinted:
             self.current_overlay = self.overlay_tinted.get(color, self.overlay_tinted[self.settings.wht])
 
+            
     # Drawing
     def _draw(self):
         self.screen.fill((0, 0, 0))
