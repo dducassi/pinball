@@ -139,7 +139,7 @@ class Pinball:
         self.selected_option = 0
         self.show_credits = False
         self.show_high_scores = False
-        self.high_scores = self.load_high_scores()
+        self.high_scores = self.load_high_scores(self.current_table_name)
         self.high_score = self.high_scores[0][0] if self.high_scores else 0
         self.new_high_score_achieved = False
         self.credits_text = [ ... ]   # unchanged
@@ -302,6 +302,10 @@ class Pinball:
         self.current_table_title = table.title
         self.current_tagline = table.tagline
         self._update_messages()
+        self.current_table_name = table.name
+        self.high_scores = self.load_high_scores(self.current_table_name)
+        self.high_score = self.high_scores[0][0] if self.high_scores else 0
+
     
     def _pre_tint_background(self):
         """Build tinted versions of the current background for orb color effects."""
@@ -335,30 +339,53 @@ class Pinball:
         else:
             self.current_overlay = None
 
-    def load_high_scores(self):
+    def load_high_scores(self, table_name):
         scores = []
         try:
             with open('highscores.txt', 'r') as f:
                 for line in f:
                     parts = line.strip().split(',')
                     if len(parts) == 2:
-                        scores.append((int(parts[0]), parts[1]))
+                        score, name = parts
+                        table = "WIZARD'S TOWER"   # old format default
+                    elif len(parts) == 3:
+                        score, name, table = parts
+                    else:
+                        continue
+                    if table == table_name:
+                        scores.append((int(score), name))
         except:
             pass
         scores.sort(key=lambda x: x[0], reverse=True)
         return scores[:5]
 
-    def save_high_score(self, score, name):
-        self.high_scores.append((score, name))
-        self.high_scores.sort(key=lambda x: x[0], reverse=True)
-        self.high_scores = self.high_scores[:5]
-        self.high_score = self.high_scores[0][0] if self.high_scores else 0
+    def save_high_score(self, score, name, table_name):
+        all_scores = []
         try:
-            with open('highscores.txt', 'w') as f:
-                for s, n in self.high_scores:
-                    f.write(f"{s},{n}\n")
+            with open('highscores.txt', 'r') as f:
+                for line in f:
+                    parts = line.strip().split(',')
+                    if len(parts) == 2:
+                        s, n = parts
+                        t = "WIZARD'S TOWER"
+                    elif len(parts) == 3:
+                        s, n, t = parts
+                    else:
+                        continue
+                    all_scores.append((int(s), n, t))
         except:
             pass
+        all_scores.append((score, name, table_name))
+        all_scores.sort(key=lambda x: x[0], reverse=True)
+        try:
+            with open('highscores.txt', 'w') as f:
+                for s, n, t in all_scores:
+                    f.write(f"{s},{n},{t}\n")
+        except:
+            pass
+        # Reload scores for the current table
+        self.high_scores = self.load_high_scores(table_name)
+        self.high_score = self.high_scores[0][0] if self.high_scores else 0
 
     def _draw_high_scores(self):
         try:
@@ -530,7 +557,7 @@ class Pinball:
     def _handle_name_entry_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN and self.entry_name:
-                self.save_high_score(self.entry_score, self.entry_name.upper())
+                self.save_high_score(self.entry_score, self.entry_name.upper(), self.current_table_name)
                 self._set_state(GameState.MENU)
                 self.entry_name = ""
                 self.entry_score = 0
@@ -783,6 +810,7 @@ class Pinball:
                          self._set_state(GameState.NAME_ENTRY)
                      else:
                          self._set_state(GameState.GAME_OVER)
+            
                          
                 
 
