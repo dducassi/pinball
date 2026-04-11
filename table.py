@@ -1,6 +1,5 @@
 import pygame
 import os
-from settings import Settings
 from bumpers import Bumper
 from blocks import Block
 from one_way_block import OneWayBlock 
@@ -12,9 +11,11 @@ class Table:
     def __init__(self, name, builder_class, title, tagline, music_path=None,
                  bg_path=None, lane_bg_path=None, use_ball_image=True,
                  small_bumper_messages=None, large_bumper_messages=None,
-                 color_cycle=None, tint_background=True):
+                 color_cycle=None, tint_background=True, scoring_rules=None,
+                 pph=100):
         self.name = name
         self.builder_class = builder_class
+        self.pph = pph
         self.title = title
         self.tagline = tagline
         self.music_path = music_path
@@ -23,9 +24,30 @@ class Table:
         self.use_ball_image = use_ball_image
         self.small_bumper_messages = small_bumper_messages or ["BUMPER!"]
         self.large_bumper_messages = large_bumper_messages or {}
-        self.color_cycle = color_cycle  # e.g., ['wht', 'blu', 'red']
+        self.color_cycle = color_cycle
         self.tint_background = tint_background
+        self.scoring_rules = scoring_rules
 
+    def get_bumper_score(self, bumper, settings):
+        """Calculate score for a bumper hit using table's rules."""
+        radius = bumper.radius
+        # Use table's custom scoring rules if provided
+        if self.scoring_rules:
+            if radius > 50:
+                return self.scoring_rules.get('large', lambda r: 0)(radius)
+            elif 30 < radius <= 50:
+                return self.scoring_rules.get('medium', lambda r: 0)(radius)
+            else:
+                return self.scoring_rules.get('small', lambda r: 0)(radius)
+        else:
+            # Default scoring based on radius relative to ball radius (br)
+            br = settings.br
+            if radius > 5 * br:      # large bumpers (e.g., wizard orb: 6*br)
+                return self.pph * 10
+            elif 30 < radius <= 50:   # medium bumpers (e.g., 2*br)
+                return self.pph * 1
+            else:                     # small bumpers
+                return self.pph * 2
 
 class TableManager:
     def __init__(self, settings, base_dir):
@@ -34,9 +56,9 @@ class TableManager:
         self.tables = []
         self.current_index = 0
         self._register_tables()
+        pph = 100
 
     def _register_tables(self):
-
         # Wizard table
         self.tables.append(Table(
             name="WIZARD'S TOWER",
@@ -51,28 +73,35 @@ class TableManager:
                 self.settings.red: "FIREBALL!",
                 self.settings.wht: "BALL LIGHTNING!"
             },
-            small_bumper_messages = ["BOOM!", "HISS!", "POP!", "ZAP!", "BUZZ!"],
+            small_bumper_messages=["BOOM!", "HISS!", "POP!", "ZAP!", "BUZZ!"],
             color_cycle=[self.settings.wht, self.settings.blu, self.settings.red],
-            tint_background=True
+            tint_background=True,
+            
         ))
 
         # Minimalist table
         self.tables.append(Table(
-                name="THE MINIMALIST",
-                builder_class=MinimalistTableBuilder,
-                title="THE MINIMALIST",
-                tagline="START GAME",
-                music_path=None,
-                bg_path=None,
-                lane_bg_path=None,
-                use_ball_image=False,
-                large_bumper_messages={
-                    self.settings.blu: "BLUE!",
-                    self.settings.ylw: "YELLOW!",
-                    self.settings.red: "RED!"
-                },
-                color_cycle=None,   # no color cycling
-                tint_background=False
+            name="THE MINIMALIST",
+            builder_class=MinimalistTableBuilder,
+            title="THE MINIMALIST",
+            tagline="START GAME",
+            music_path=None,
+            bg_path=None,
+            lane_bg_path=None,
+            use_ball_image=False,
+            large_bumper_messages={
+                self.settings.blu: "BLUE!",
+                self.settings.ylw: "YELLOW!",
+                self.settings.red: "RED!"
+            },
+            small_bumper_messages=["BUMP!"],
+            color_cycle=None,
+            tint_background=False,
+            scoring_rules={
+                'large': lambda r: 1000,
+                'medium': lambda r: 500,
+                'small': lambda r: 100
+            },
         ))
 
     def get_current_table(self):
@@ -184,14 +213,14 @@ class WizardTableBuilder(TableBuilderBase):
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 2 * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, 18, color, light_image))
+        lights.append(Light(x, y, 21, color, light_image))
 
         # Lower right bumper (small orb)
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 2  * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, 18, color, light_image))
+        lights.append(Light(x, y, 21, color, light_image))
 
         # Wizard's chest
         x = self.playfield_width // 2
@@ -561,15 +590,15 @@ class MinimalistTableBuilder(TableBuilderBase):
         x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4)
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 2 * self.settings.br
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, bump_rad + 1, self.settings.wht, light_image))
+        bumpers.append(Bumper(x, y, self.settings.ppl, bump_rad, orb_image))
+        lights.append(Light(x, y, bump_rad + 1, self.settings.ppl, light_image))
 
         # Lower right bumper 
         x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
         y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
         bump_rad = 2  * self.settings.br
-        bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, bump_rad + 1, self.settings.wht, light_image))
+        bumpers.append(Bumper(x, y, self.settings.ppl, bump_rad, orb_image))
+        lights.append(Light(x, y, bump_rad + 1, self.settings.ppl, light_image))
 
         # Secondary main bumper
         x = 3 * self.playfield_width // 4
