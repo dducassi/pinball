@@ -797,6 +797,8 @@ class Pinball:
             return
 
         current_table = self.table_manager.get_current_table()
+        points = current_table.get_bumper_score(bumper, self.settings)
+        self.score_manager.add_points(points)
 
         # 1. Update the hit bumper's color (cycle if table has color_cycle)
         new_color = None
