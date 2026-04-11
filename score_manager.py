@@ -3,19 +3,11 @@ class ScoreManager:
         self.notification_center = notification_center
         self.settings = settings
         self.score = 0
-        self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
 
-    def on_bumper_hit(self, bumper):
-        # Scoring logic
-        if bumper.radius > 20:
-            self.score += self.settings.pph * 10
-        elif 5.5 < bumper.radius < 15:
-            self.score += self.settings.pph * 2
-        elif bumper.radius < 6:
-            self.score += self.settings.pph * 3
-        else:
-            self.score += self.settings.pph // 2
+   
 
+    def add_points(self, points):
+        self.score += points
         self.notification_center.post_notification('score_changed', self.score)
 
     def reset(self):
