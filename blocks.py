@@ -144,46 +144,53 @@ class Block:
         else:
             pygame.draw.polygon(screen, self.c, self.vertices)
 
-                # Draw bevel effect for sloping edges (funnel blocks)
-                # Draw bevel effect for sloping edges (funnel blocks)
+        # Draw bevel effect for all edges (if pattern and quadrilateral)
         if self.pattern and len(self.vertices) == 4:
-            edges = [(self.vertices[i], self.vertices[(i+1)%4]) for i in range(4)]
-            for (p1, p2) in edges:
-                # Check if edge is sloping (x coordinates differ)
-                if abs(p1[0] - p2[0]) > 5:
-                    dx = p2[0] - p1[0]
-                    dy = p2[1] - p1[1]
-                    edge_len = math.hypot(dx, dy)
-                    if edge_len == 0:
-                        continue
-                    # Unit vector along edge
-                    ux = dx / edge_len
-                    uy = dy / edge_len
-                    # Inset amount (pixels) – adjust as needed
-                    inset = 2
-                    if inset * 2 >= edge_len:
-                        inset = edge_len / 2.1  # avoid zero length
+            # Compute centroid (average of vertices) – always inside convex polygon
+            centroid_x = sum(v[0] for v in self.vertices) / 4
+            centroid_y = sum(v[1] for v in self.vertices) / 4
 
-                    # New start and end points inset along the edge
-                    s1 = (p1[0] + ux * inset, p1[1] + uy * inset)
-                    s2 = (p2[0] - ux * inset, p2[1] - uy * inset)
+            for i in range(4):
+                p1 = self.vertices[i]
+                p2 = self.vertices[(i+1) % 4]
+                dx = p2[0] - p1[0]
+                dy = p2[1] - p1[1]
+                edge_len = math.hypot(dx, dy)
+                if edge_len < 1e-6:
+                    continue
 
-                    # Perpendicular vector (rotate 90 deg)
-                    perp_x = -dy
-                    perp_y = dx
-                    length = math.hypot(perp_x, perp_y)
-                    if length > 0:
-                        perp_x /= length
-                        perp_y /= length
-                    # Lighting/Shading
-                    if p2[1] > p1[1]:   # downward sloping (top edge) -> shadow
-                        color = (30, 30, 30)        # dark gray
-                    else:                # upward sloping (bottom edge) -> highlight
-                        color = (210, 210, 210)    # light gray
-                    # Draw a thick line (5 lines) to simulate bevel, using inset points
-                    for d in range(-2, 3):
-                        ox = -perp_x * d * 0.5
-                        oy = -perp_y * d * 0.5
-                        start = (s1[0] + ox, s1[1] + oy)
-                        end = (s2[0] + ox, s2[1] + oy)
-                        pygame.draw.line(screen, color, start, end,2)
+                # Unit edge vector
+                ux = dx / edge_len
+                uy = dy / edge_len
+
+                # Inset distance along the edge (to avoid corner overlap)
+                inset = 1
+                if inset * 2 >= edge_len:
+                    inset = edge_len / 2.1
+
+                # Start/end points inset along the edge
+                s1 = (p1[0] + ux * inset, p1[1] + uy * inset)
+                s2 = (p2[0] - ux * inset, p2[1] - uy * inset)
+
+                # Midpoint of the edge
+                mid_x = (p1[0] + p2[0]) / 2
+                mid_y = (p1[1] + p2[1]) / 2
+                # Direction from midpoint to centroid (inward)
+                inward_x = centroid_x - mid_x
+                inward_y = centroid_y - mid_y
+                length = math.hypot(inward_x, inward_y)
+                if length > 0:
+                    inward_x /= length
+                    inward_y /= length
+
+                # Highlight/shadow based on slope
+                if p2[1] < p1[1]:   # upward sloping (top edge) → light
+                    color = (210, 210, 210)
+                else:               # downward sloping (bottom edge) → dark
+                    color = (30, 30, 30)
+
+                # Offset inward by 1 pixels
+                offset = 0
+                start = (s1[0] + inward_x * offset, s1[1] + inward_y * offset)
+                end   = (s2[0] + inward_x * offset, s2[1] + inward_y * offset)
+                pygame.draw.line(screen, color, start, end, 4)
