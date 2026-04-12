@@ -53,7 +53,7 @@ class Pinball:
             os.environ['SDL_AUDIODRIVER'] = 'dummy'
         pygame.init()
         pygame.mixer.init()
-        pygame.mixer.set_num_channels(8)
+        pygame.mixer.set_num_channels(16)
 
         self.settings = Settings()
 
@@ -199,6 +199,7 @@ class Pinball:
         self.images['small_orb_image'] = load_img('small_orb.png')
         self.images['tiny_bumper_image'] = load_img('tiny_bumper.png')
         self.images['light_image'] = load_img('light.png')
+        self.images['moon_image'] = load_img('moon.png')
 
         # Ball and flipper
         self.images['ball_image'] = load_img('pinball.png')
@@ -223,6 +224,7 @@ class Pinball:
 
         self.current_table_title = table.title
         self.current_tagline = table.tagline
+        self.sound_manager.load_table_sounds(table.sounds)
         self._update_messages() 
 
         # --- Recreate flippers (their positions depend on playfield dimensions) ---
@@ -318,24 +320,36 @@ class Pinball:
                 tinted.blit(color_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                 return tinted
 
-            bg_blue = (30, 205, 255)
-            bg_red  = (255, 100, 20)
-            bg_white = (255, 255, 255)
+            # Define tints for all possible colors
 
-            self.bg_tinted[self.settings.blu] = tint_image(self.bg, bg_blue)
-            self.bg_tinted[self.settings.red] = tint_image(self.bg, bg_red)
-            self.bg_tinted[self.settings.wht] = tint_image(self.bg, bg_white)
+            color_tints = {
+                self.settings.wht: (255, 255, 255),
+                self.settings.blu: (30, 205, 255),
+                self.settings.red: (255, 100, 20),
+                self.settings.pnk: (255, 150, 200),   # soft pink tint
+                self.settings.ppl: (180, 100, 255)    # soft purple tint
+            }
+            for color, tint_color in color_tints.items():
+                self.bg_tinted[color] = tint_image(self.bg, tint_color)
 
-            self.current_bg = self.bg_tinted[self.settings.wht]
+            self.current_bg = self.bg_tinted.get(self.settings.wht, self.bg)
         else:
             self.current_bg = None
 
         self.overlay_tinted = {}
         if self.bg:
-            self.overlay_tinted[self.settings.blu] = self._make_overlay((10, 15, 255), 25)
-            self.overlay_tinted[self.settings.red] = self._make_overlay((255, 15, 15), 25)
-            self.overlay_tinted[self.settings.wht] = self._make_overlay((255, 255, 255), 0)
-            self.current_overlay = self.overlay_tinted[self.settings.wht]
+            # Overlay tints (semi-transparent)
+            overlay_colors = {
+                self.settings.wht: (255, 255, 255, 0),
+                self.settings.blu: (10, 15, 255, 25),
+                self.settings.red: (255, 15, 15, 25),
+                self.settings.pnk: (255, 105, 180, 25),
+                self.settings.ppl: (138, 43, 226, 25)
+            }
+            for color, (r, g, b, a) in overlay_colors.items():
+                surf = self._make_overlay((r, g, b), a)
+                self.overlay_tinted[color] = surf
+            self.current_overlay = self.overlay_tinted.get(self.settings.wht, self.overlay_tinted[self.settings.wht])
         else:
             self.current_overlay = None
 
@@ -638,10 +652,12 @@ class Pinball:
                 self.fl.active = True
                 self.fl.activate()
                 self.notification_center.post_notification('flipper_click', self.fl)
+                self.sound_manager.play('flipper')
             elif event.key == pygame.K_RIGHT:
                 self.fr.active = True
                 self.fr.activate()
                 self.notification_center.post_notification('flipper_click', self.fr)
+                self.sound_manager.play('flipper')   
                 
             elif event.key == pygame.K_p:
                 self._set_state(GameState.PAUSED)
@@ -676,6 +692,7 @@ class Pinball:
                     self.ball_save_start_time = pygame.time.get_ticks()
                     self.secondary_message = 'SAVE'   # display during grace period
                     self.notification_center.post_notification('ball_launch')
+                    self.sound_manager.play('launch')
                     
                     
     def _handle_paused_event(self, event):
@@ -707,7 +724,8 @@ class Pinball:
         # Reset bumpers to the initial color
         if current_table.color_cycle:
             for bumper in self.bumpers:
-                bumper.color = initial_color
+
+                bumper.set_color(initial_color)
 
         # Reset lights: turn off and set color to match bumpers' initial
         if current_table.color_cycle:
@@ -790,12 +808,14 @@ class Pinball:
                  self.b.reset()
                  self.b.trapped = False
                  self.notification_center.post_notification('ball_saved')
+                 self.sound_manager.play('ball_saved')
              else:
                  self.temp_message = 'BALL LOST'
                  self.secondary_message = ''
                  self.temp_message_time = now
                  self.lives -= 1
                  self.notification_center.post_notification('ball_lost')
+                 self.sound_manager.play('ball_lost') 
                  if self.lives > 0:
                      self.b.reset()
                      self.b.trapped = False
@@ -803,6 +823,7 @@ class Pinball:
                      
                  else:
                      self.notification_center.post_notification('game_over')
+                     self.sound_manager.play('game_over')  
                      # Check if score qualifies for high score list
                      if (len(self.high_scores) < 5 or self.score_manager.score > min(s for s,_ in self.high_scores)):
                          self.entry_score = self.score_manager.score
@@ -827,6 +848,7 @@ class Pinball:
         current_table = self.table_manager.get_current_table()
         points = current_table.get_bumper_score(bumper, self.settings)
         self.score_manager.add_points(points)
+        self.sound_manager.play('bumper')
 
         # 1. Update the hit bumper's color (cycle if table has color_cycle)
         new_color = None
@@ -837,7 +859,7 @@ class Pinball:
                 new_color = current_table.color_cycle[(idx + 1) % len(current_table.color_cycle)]
             else:
                 new_color = current_table.color_cycle[0]
-            bumper.color = new_color
+            bumper.set_color(new_color)
 
         # 2. Update the corresponding light's color and turn it on
         try:
@@ -871,7 +893,7 @@ class Pinball:
 
         # Propagate the new color to all bumpers and lights
         for bumper in self.bumpers:
-            bumper.color = color
+            bumper.set_color(color)
         for light in self.lights:
             light.set_color(color)
 
