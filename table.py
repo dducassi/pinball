@@ -259,18 +259,18 @@ class WizardTableBuilder(TableBuilderBase):
         lights.append(Light(x, y, 15, color, light_image))
 
         # Lower left bumper (small orb)
-        x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4)
-        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 2 * self.settings.br
+        x = self.playfield_width - 1/7 * self.playfield_width - 0.9 * self.settings.br
+        y = self.top_margin + self.playfield_height - 39/112 * self.playfield_height
+        bump_rad = 2.1 * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, 21, color, light_image))
+        lights.append(Light(x, y, 22, color, light_image))
 
         # Lower right bumper (small orb)
-        x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
-        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 2  * self.settings.br
+        x = 1/7 * self.playfield_width + 0.9 * self.settings.br
+        y = self.top_margin + self.playfield_height - 39/112 * self.playfield_height
+        bump_rad = 2.1  * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, orb_image))
-        lights.append(Light(x, y, 21, color, light_image))
+        lights.append(Light(x, y, 22, color, light_image))
 
         # Wizard's chest
         x = self.playfield_width // 2
@@ -445,14 +445,14 @@ class WizardTableBuilder(TableBuilderBase):
         blocks.append(Block(right_lower_top_vertices, self.settings.slv, self.settings.restitution, image=self.edge_horz))
 
         # Funnel blocks above left and right main blocks – no texture
-        funnel_height = 50
+        funnel_height = 60
         # Left funnel
         left_top_y = self.top_margin + self.playfield_height - 9/28 * self.playfield_height
         left_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         left_funnel_vertices = [
             (3 * self.settings.br, left_top_y - funnel_height),
-            (3 * self.settings.br + 6, left_top_y),
-            (2/7 * self.playfield_width - self.settings.br * 1.1, left_bottom_y),
+            (3.7 * self.settings.br, left_top_y),
+            (2/7 * self.playfield_width - self.settings.br * 1, left_bottom_y),
             (2/7 * self.playfield_width - self.settings.br * 1.7, left_bottom_y - funnel_height)
         ]
         blocks.append(Block(left_funnel_vertices, self.settings.slv, restitution=self.settings.restitution, pattern=True))
@@ -462,8 +462,8 @@ class WizardTableBuilder(TableBuilderBase):
         right_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         right_funnel_vertices = [
             (self.playfield_width - 3 * self.settings.br, right_top_y - funnel_height),
-            (self.playfield_width - 3 * self.settings.br - 6, right_top_y),
-            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.1, right_bottom_y),
+            (self.playfield_width - 3.7 * self.settings.br, right_top_y),
+            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1, right_bottom_y),
             (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.7, right_bottom_y - funnel_height)
         ]
         blocks.append(Block(right_funnel_vertices, self.settings.slv, self.settings.restitution, pattern=True))
@@ -636,19 +636,20 @@ class MinimalistTableBuilder(TableBuilderBase):
         bumpers.append(Bumper(x, y, self.settings.red, bump_rad, orb_image))
         lights.append(Light(x, y, bump_rad + 2, self.settings.red, light_image))
 
-        # Lower left bumper 
-        x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4)
-        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 2 * self.settings.br
+        # Lower left bumper (small orb)
+        x = self.playfield_width - 1/7 * self.playfield_width - 0.9 * self.settings.br
+        y = self.top_margin + self.playfield_height - 39/112 * self.playfield_height
+        bump_rad = 2.1 * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.ppl, bump_rad, orb_image))
-        lights.append(Light(x, y, bump_rad + 1, self.settings.ppl, light_image))
+        lights.append(Light(x, y, 21, self.settings.ppl, light_image))
 
-        # Lower right bumper 
-        x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
-        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 2  * self.settings.br
+        # Lower right bumper (small orb)
+        x = 1/7 * self.playfield_width + 0.9 * self.settings.br
+        y = self.top_margin + self.playfield_height - 39/112 * self.playfield_height
+        bump_rad = 2.1  * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.ppl, bump_rad, orb_image))
-        lights.append(Light(x, y, bump_rad + 1, self.settings.ppl, light_image))
+        lights.append(Light(x, y, 21, self.settings.ppl, light_image))
+
 
         # Secondary main bumper
         x = 3 * self.playfield_width // 4
@@ -783,14 +784,14 @@ class MinimalistTableBuilder(TableBuilderBase):
         
 
         # Funnel blocks above left and right main blocks – no texture
-        funnel_height = 50
+        funnel_height = 60
         # Left funnel
         left_top_y = self.top_margin + self.playfield_height - 9/28 * self.playfield_height
         left_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         left_funnel_vertices = [
             (3 * self.settings.br, left_top_y - funnel_height),
-            (3 * self.settings.br + 6, left_top_y),
-            (2/7 * self.playfield_width - self.settings.br * 1.1, left_bottom_y),
+            (3.7 * self.settings.br, left_top_y),
+            (2/7 * self.playfield_width - self.settings.br * 1, left_bottom_y),
             (2/7 * self.playfield_width - self.settings.br * 1.7, left_bottom_y - funnel_height)
         ]
         blocks.append(Block(left_funnel_vertices, self.settings.slv, restitution=self.settings.restitution, pattern=True))
@@ -800,8 +801,8 @@ class MinimalistTableBuilder(TableBuilderBase):
         right_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         right_funnel_vertices = [
             (self.playfield_width - 3 * self.settings.br, right_top_y - funnel_height),
-            (self.playfield_width - 3 * self.settings.br - 6, right_top_y),
-            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.1, right_bottom_y),
+            (self.playfield_width - 3.7 * self.settings.br, right_top_y),
+            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1, right_bottom_y),
             (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.7, right_bottom_y - funnel_height)
         ]
         blocks.append(Block(right_funnel_vertices, self.settings.slv, self.settings.restitution, pattern=True))
@@ -964,19 +965,20 @@ class FairyTableBuilder(TableBuilderBase):
         bumpers.append(Bumper(x, y, color, bump_rad, moon_image))
         lights.append(Light(x, y, bump_rad * 1.05, color, light_image))
 
-        # Lower left bumper 
-        x = self.playfield_width - 1/7 * self.playfield_width - (3 * self.settings.br / 4)
-        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 2 * self.settings.br
+         # Lower left bumper (small orb)
+        x = self.playfield_width - 1/7 * self.playfield_width - 0.9 * self.settings.br
+        y = self.top_margin + self.playfield_height - 39/112 * self.playfield_height
+        bump_rad = 2.1 * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, moon_image))
-        lights.append(Light(x, y, 21, color, light_image))
+        lights.append(Light(x, y, 22, color, light_image))
 
-        # Lower right bumper
-        x = (0.18 * self.settings.lane_wall_thickness) + 1/7 * self.playfield_width + (3 * self.settings.br / 4) 
-        y = self.top_margin + self.playfield_height - 19/56 * self.playfield_height
-        bump_rad = 2  * self.settings.br
+        # Lower right bumper (small orb)
+        x = 1/7 * self.playfield_width + 0.9 * self.settings.br
+        y = self.top_margin + self.playfield_height - 39/112 * self.playfield_height
+        bump_rad = 2.1  * self.settings.br
         bumpers.append(Bumper(x, y, self.settings.wht, bump_rad, moon_image))
-        lights.append(Light(x, y, 21, color, light_image))
+        lights.append(Light(x, y, 22, color, light_image))
+
 
         # Upper left rock
         x = 2/7 * self.playfield_width + self.settings.br
@@ -1136,14 +1138,14 @@ class FairyTableBuilder(TableBuilderBase):
         blocks.append(Block(right_lower_top_vertices, self.settings.slv, self.settings.restitution, image=self.edge_horz))
 
         # Funnel blocks above left and right main blocks – no texture
-        funnel_height = 50
+        funnel_height = 60
         # Left funnel
         left_top_y = self.top_margin + self.playfield_height - 9/28 * self.playfield_height
         left_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         left_funnel_vertices = [
             (3 * self.settings.br, left_top_y - funnel_height),
-            (3 * self.settings.br + 6, left_top_y),
-            (2/7 * self.playfield_width - self.settings.br * 1.1, left_bottom_y),
+            (3.7 * self.settings.br, left_top_y),
+            (2/7 * self.playfield_width - self.settings.br * 1, left_bottom_y),
             (2/7 * self.playfield_width - self.settings.br * 1.7, left_bottom_y - funnel_height)
         ]
         blocks.append(Block(left_funnel_vertices, self.settings.slv, restitution=self.settings.restitution, pattern=True))
@@ -1153,8 +1155,8 @@ class FairyTableBuilder(TableBuilderBase):
         right_bottom_y = self.top_margin + self.playfield_height - 6/28 * self.playfield_height
         right_funnel_vertices = [
             (self.playfield_width - 3 * self.settings.br, right_top_y - funnel_height),
-            (self.playfield_width - 3 * self.settings.br - 6, right_top_y),
-            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.1, right_bottom_y),
+            (self.playfield_width - 3.7 * self.settings.br, right_top_y),
+            (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1, right_bottom_y),
             (self.playfield_width - 2/7 * self.playfield_width + self.settings.br * 1.7, right_bottom_y - funnel_height)
         ]
         blocks.append(Block(right_funnel_vertices, self.settings.slv, self.settings.restitution, pattern=True))
