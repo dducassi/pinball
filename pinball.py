@@ -14,10 +14,12 @@ from flipper import Flipper
 from plunger import Plunger
 from gamestate import GameState
 from physics_engine import PhysicsEngine
-from table_builder import TableBuilder
+from table import Table
+from table import TableManager
 from notification_center import NotificationCenter
 from score_manager import ScoreManager
 from sound_manager import SoundManager
+
 from time import sleep
 import winsound
 
@@ -45,284 +47,270 @@ font_path = os.path.join(base_dir, 'PressStart2P-Regular.ttf')
 class Pinball:
 
     def __init__(self, test_mode=False):
-        
         self.test_mode = test_mode
         if test_mode:
             os.environ['SDL_VIDEODRIVER'] = 'dummy'
             os.environ['SDL_AUDIODRIVER'] = 'dummy'
         pygame.init()
         pygame.mixer.init()
-        pygame.mixer.set_num_channels(8)
-        
+        pygame.mixer.set_num_channels(16)
 
         self.settings = Settings()
-        
 
-
-        self.bg = None
-        self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
-        self.state = GameState.MENU
+        # Resizable window and virtual surface
+        self.display = pygame.display.set_mode(
+            (self.settings.screen_width, self.settings.screen_height),
+            pygame.RESIZABLE
+        )
+        self.screen = pygame.Surface((self.settings.screen_width, self.settings.screen_height))
         self.playfield_x = 0
         self.playfield_y = self.settings.top_margin
-        # Load background music
+
+        # Shared images (textures, bumpers, ball, flipper)
+        self.images = {}
+        self._load_shared_images()
+
+        pygame.display.set_caption('Wizard Pinball')
+
+        
+
+        self.notification_center = NotificationCenter()
+        self.score_manager = ScoreManager(self.notification_center, self.settings)
+        self.sound_manager = SoundManager(self.notification_center, base_dir)
+
+        # Load background music (but don't play yet)
         self.music_loaded = False
         self.music_playing = True
-        self.effects_enabled = True
-        self.original_music_volume = self.settings.music_volume 
-        
-        if self.music_playing == True:
-            try:
-                # Use a suitable format (OGG recommended)
-                music_path = os.path.join(base_dir, 'music.ogg')
-                pygame.mixer.music.load(music_path)
-                pygame.mixer.music.set_volume(self.original_music_volume)
-                pygame.mixer.music.play(-1)   # loop indefinitely
-                self.music_loaded = True
-                print("Background music loaded and playing.")
-            except Exception as e:
-                print(f"Background music not loaded: {e}")
+        self.original_music_volume = self.settings.music_volume
 
-      
+        try:
+            music_path = os.path.join(base_dir, 'music.ogg')
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.set_volume(self.original_music_volume)
+            # REMOVED: pygame.mixer.music.play(-1)
+            self.music_loaded = True
+            print("Background music loaded (not playing).")
+        except Exception as e:
+            print(f"Background music not loaded: {e}")
+
+        # Set blank background to start
+        self.bg = None
+
+        # Start in menu
+        self.state = GameState.MENU
+
+        # Observers
+        self.notification_center.add_observer('score_changed', self.on_score_changed)
+        self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
+        self.notification_center.add_observer('large_bumper_hit', self.on_large_bumper_hit)
+
+        self.lives = 3
+
+        self.table_manager = TableManager(self.settings, base_dir)
+
+        # Placeholders (will be filled by _load_table)
+        self.blocks = []
+        self.bumpers = []
+        self.lights = []
+        self.lane_center = 0
+        self.lane_bottom = 0
+        self.plunger = None
+        self.flippers = []
+        self.b = None
+        self.physics_engine = None
+
+        # Load the current table (creates ball, flippers, plunger, etc.)
+        self._load_table(self.table_manager.get_current_table())
+
+        # Ball save timer
+        self.ball_save_active = False
+        self.ball_save_start_time = 0
+        self.ball_save_duration = 10000
+
+        
 
         # Message system
         self.main_message = ""
         self.secondary_message = ""
         self._update_messages()
-        
 
         # Menu system
         self.menu_options = ['START GAME', 'HIGH SCORES', 'TABLE SELECTOR', 'AUDIO', 'VIDEO', 'CREDITS', 'EXIT']
         self.selected_option = 0
         self.show_credits = False
         self.show_high_scores = False
-        self.high_scores = self.load_high_scores()
+        self.high_scores = self.load_high_scores(self.current_table_name)
         self.high_score = self.high_scores[0][0] if self.high_scores else 0
         self.new_high_score_achieved = False
-        self.credits_text = [
-            "Wizard's Tower Pinball",
-            "",
-            "",
-            "Design & Programming: Daniel Ducassi",
-            "",
-            "Graphics: Daniel Ducassi",
-            "",
-            "Audio: Daniel Ducassi",
-            "",
-            "Music: 'In the Hall of the Mountain King'",
-            "Edvard Grieg,",
-            "Arrangement: The University Society, 1918",
-            "",
-            "",
-            "Thanks for playing!"
-        ]
+        self.credits_text = [ ... ]   # unchanged
         self.audio_submenu = False
         self.audio_options = ['SOUND EFFECTS', 'MUSIC', 'BACK']
         self.audio_selected = 0
         self.resume_game = False
         self.entry_name = ""
         self.entry_score = 0
-        
 
         # Temporary message system
         self.temp_message = ""
         self.temp_message_time = 0
-        self.temp_message_duration = 2000  # milliseconds
-
-        # Load Crystal Orb image
-        try:
-            img = pygame.image.load(os.path.join(base_dir, 'crystal_orb.png')).convert_alpha()
-            self.orb_image = img
-            print("Crystal orb image loaded, size:", img.get_size())
-            desired_size = 180 # radius 45 * 2
-            self.orb_image = pygame.transform.scale(img, (desired_size, desired_size))
-        except:
-            print("Crystal orb image not found, using fallback circle.")
-            self.orb_image = None
-
-        # Load Small Orb image (for lower bumpers)p
-        try:
-            small_img = pygame.image.load(os.path.join(base_dir, 'small_orb.png')).convert_alpha()
-            self.small_orb_image = small_img
-            print("Small orb image loaded, size:", small_img.get_size())
-            # No scaling here – Bumper will scale to its radius
-        except:
-            print("Small orb image not found, using fallback circle.")
-            self.small_orb_image = None
-
-        # Load Tiny Bumper image (for tiny bumpers near main orb)
-        try:
-            tiny_bumper_img = pygame.image.load(os.path.join(base_dir, 'tiny_bumper.png')).convert_alpha()
-            self.tiny_bumper_image = tiny_bumper_img
-            print("Tiny Bumper image loaded, size:", tiny_bumper_img.get_size())
-        except:
-            print("Tiny Bumper image not found, using fallback circle.")
-            self.tiny_bumper_image = None
-
-         # Load pinball image (ball)
-        try:
-            ball_img = pygame.image.load(os.path.join(base_dir, 'pinball.png')).convert_alpha()
-            self.ball_image = ball_img
-            print("Pinball image loaded, size:", ball_img.get_size())
-        except:
-            print("Pinball image not found, using fallback circle.")
-            self.ball_image = None
-        self.b = Ball(self, self.ball_image)
-
-        # Load block texture
-        try:
-            block_texture = pygame.image.load(os.path.join(base_dir, 'block_texture.png')).convert()
-            self.block_texture = block_texture
-            print("Block texture loaded")
-        except:
-            print("Block texture not found, using solid colors.")
-            self.block_texture = None
-
-        # Load triangle block texture
-        try:
-            tri_texture = pygame.image.load(os.path.join(base_dir, 'tri_image.png')).convert_alpha()
-            tri_flipped = pygame.transform.flip(tri_texture, True, False)   # horizontal flip
-            tri_mirrored = pygame.transform.flip(tri_texture, False, True)   # vertical flip
-            self.tri_texture = tri_texture
-            self.tri_flipped = tri_flipped
-            self.tri_mirrored = tri_mirrored
-            print("Triangle texture loaded")
-        except:
-            print("Triangle texture not found, using solid colors.")
-            self.tri_texture = None
-            self.tri_flipped = None
-            self.tri_mirrored = None
-
-        try:
-            edge_vert = pygame.image.load(os.path.join(base_dir, 'edge_vert.png')).convert_alpha()
-            self.edge_vert_texture = edge_vert
-            print("Vertical edge texture loaded")
-        except:
-            print("edge_vert.png not found")
-            self.edge_vert_texture = None
-
-        try:
-            edge_horz = pygame.image.load(os.path.join(base_dir, 'edge_horz.png')).convert_alpha()
-            self.edge_horz_texture = edge_horz
-            print("Horizontal edge texture loaded")
-        except:
-            print("edge_horz.png not found")
-            self.edge_horz_texture = None
-
-        wall_thick = self.settings.lane_wall_thickness
-
-        if self.edge_vert_texture:
-            self.edge_vert_texture = pygame.transform.scale(
-                self.edge_vert_texture,
-                (wall_thick, self.edge_vert_texture.get_height())
-            )
-
-        if self.edge_horz_texture:
-            self.edge_horz_texture = pygame.transform.scale(
-                self.edge_horz_texture,
-                (self.edge_horz_texture.get_width(), wall_thick)
-        )
-
+        self.temp_message_duration = 2000
         
-        # Load flipper image
-        try:
-            flipper_img = pygame.image.load(os.path.join(base_dir, 'flipper.png')).convert_alpha()
-            self.flipper_image = flipper_img
-            print("Flipper image loaded")
-        except:
-            print("Flipper image not found, using fallback drawing.")
-            self.flipper_image = None
+    def _update_menu_options(self):
+        if self.resume_game:
+            self.menu_options = ['RESUME GAME', 'HIGH SCORES', 'AUDIO', 'VIDEO', 'CREDITS', 'EXIT']
+        else:
+            self.menu_options = ['START GAME', 'HIGH SCORES', 'TABLE SELECTOR', 'AUDIO', 'VIDEO', 'CREDITS', 'EXIT']
+        # Reset selected option to avoid index errors
+        if self.selected_option >= len(self.menu_options):
+            self.selected_option = 0
 
-         # Load light image
-        try:
-            light_img = pygame.image.load(os.path.join(base_dir, 'light.png')).convert_alpha()
-            self.light_image = light_img
-        except:
-            self.light_image = None
+    def _load_shared_images(self):
+        """Load all images used by tables (textures, bumpers, ball, flipper, etc.)."""
+        # Helper to load and optionally scale an image
+        def load_img(filename, scale=None, convert_alpha=True):
+            path = os.path.join(base_dir, filename)
+            try:
+                if convert_alpha:
+                    img = pygame.image.load(path).convert_alpha()
+                else:
+                    img = pygame.image.load(path).convert()
+                if scale:
+                    img = pygame.transform.scale(img, scale)
+                return img
+            except Exception as e:
+                print(f"Could not load {filename}: {e}")
+                return None
 
-        
+        # Block textures
+        self.images['block_texture'] = load_img('block_texture.png', convert_alpha=False)
+        self.images['tri_texture'] = load_img('tri_image.png')
+        if self.images['tri_texture']:
+            self.images['tri_flipped'] = pygame.transform.flip(self.images['tri_texture'], True, False)
+            self.images['tri_mirrored'] = pygame.transform.flip(self.images['tri_texture'], False, True)
+        else:
+            self.images['tri_flipped'] = None
+            self.images['tri_mirrored'] = None
 
+        self.images['edge_vert_texture'] = load_img('edge_vert.png')
+        self.images['edge_horz_texture'] = load_img('edge_horz.png')
 
-        pygame.display.set_caption('Wizard Pinball')
+        # Bumper images
+        self.images['orb_image'] = load_img('crystal_orb.png', scale=(180,180))
+        self.images['small_orb_image'] = load_img('small_orb.png')
+        self.images['tiny_bumper_image'] = load_img('tiny_bumper.png')
+        self.images['light_image'] = load_img('light.png')
+        self.images['moon_image'] = load_img('moon.png')
 
-        self.notification_center = NotificationCenter()
-        self.score_manager = ScoreManager(self.notification_center, self.settings)
-        self.sound_manager = SoundManager(self.notification_center, base_dir)
+        # Ball and flipper
+        self.images['ball_image'] = load_img('pinball.png')
+        self.images['flipper_image'] = load_img('flipper.png')
 
-        # Observe score changes
+        # Backgrounds (loaded per‑table, uses default wizard background)
+        # Tables loaded in _load_table.
 
-        self.notification_center.add_observer('score_changed', self.on_score_changed)
+    def _load_table(self, table):
+        builder = table.builder_class(self.settings, self.images)
+        blocks = builder.generate_blocks()
+        bumpers, lights = builder.generate_bumpers(self.images)
+        lane_center = builder.get_lane_center()
+        lane_bottom = builder.get_lane_bottom()
+        plunger_y = builder.get_plunger_base_y()
 
-        
-        # Observe bumper hits
-        self.notification_center.add_observer('bumper_hit', self.on_bumper_hit)
-        self.notification_center.add_observer('large_bumper_hit', self.on_large_bumper_hit)
+        self.blocks = blocks
+        self.bumpers = bumpers
+        self.lights = lights
+        self.lane_center = lane_center
+        self.lane_bottom = lane_bottom
 
-        # Ball
-        self.lives = 3
-        
+        self.current_table_title = table.title
+        self.current_tagline = table.tagline
+        self.sound_manager.load_table_sounds(table.sounds)
+        self._update_messages() 
 
-        # Flippers
+        # --- Recreate flippers (their positions depend on playfield dimensions) ---
+        # Use the same formulas as before, but now flipper_image comes from self.images
+        flipper_img = self.images.get('flipper_image')
         self.fl = Flipper(
             2/7 * self.settings.playfield_width,
             self.playfield_y + self.settings.playfield_height - 19/140 * self.settings.playfield_height + 1,
-            self.settings.f_length, 0.6, True
+            self.settings.f_length, 0.6, True,
+            image=flipper_img
         )
         self.fr = Flipper(
             5/7 * self.settings.playfield_width,
             self.playfield_y + self.settings.playfield_height - 19/140 * self.settings.playfield_height + 1,
-            self.settings.f_length, -0.6, False
+            self.settings.f_length, -0.6, False,
+            image=flipper_img
         )
         self.flippers = [self.fl, self.fr]
 
-        # Table elements
-        self.table_builder = TableBuilder(
-            self.settings,
-            self.block_texture,
-            self.tri_texture,
-            self.tri_flipped,
-            self.tri_mirrored,
-            edge_vert_texture=self.edge_vert_texture,
-            edge_horz_texture=self.edge_horz_texture
-        )
-        self.blocks = self.table_builder.generate_blocks()
-        self.bumpers, self.lights = self.table_builder.generate_bumpers(self.orb_image, self.small_orb_image, self.tiny_bumper_image, self.light_image)
-
-        # Physics engine
-        self.physics_engine = PhysicsEngine(
-            self.b, self.flippers, self.bumpers, self.blocks,
-            self.settings, self.notification_center
-        )
-
-        # Lane and plunger
-        self.lane_center = self.table_builder.get_lane_center()
-        self.lane_bottom = self.table_builder.get_lane_bottom()
-        self.b.lane_x_center = self.lane_center
-        self.b.lane_bottom = self.lane_bottom
-        self.b.reset()
-
+        # --- Recreate plunger ---
         self.plunger = Plunger(
-            self.lane_center,
-            self.table_builder.get_plunger_base_y(),
+            lane_center,
+            plunger_y,
             max_pull=100,
             pull_speed=5,
             max_launch_speed=15
         )
 
-        # Load background
-        if not test_mode:
-            self.bg = pygame.image.load(os.path.join(base_dir, 'wizard.png')).convert()
-            self.bg = pygame.transform.scale(self.bg,
-                                             (self.settings.playfield_width,
-                                              self.settings.playfield_height))
-            self.lane_bg =  pygame.image.load(os.path.join(base_dir, 'lane_bg.png')).convert()
-            self.lane_bg = pygame.transform.scale(self.lane_bg,
-                                             (self.settings.playfield_width,
-                                              self.settings.playfield_height))
-        else:
+        # --- Recreate ball ---
+        ball_image = self.images.get('ball_image') if table.use_ball_image else None
+        self.b = Ball(self, ball_image)
+        self.b.lane_x_center = lane_center
+        self.b.lane_bottom = lane_bottom
+        self.b.reset()
+
+        # --- Recreate physics engine ---
+        self.physics_engine = PhysicsEngine(
+            self.b, self.flippers, self.bumpers, self.blocks,
+            self.settings, self.notification_center
+        )
+
+        # --- Load table‑specific background ---
+        if hasattr(table, 'bg_path') and table.bg_path:
+            # Load custom background
+            self.bg = pygame.image.load(table.bg_path).convert()
+            self.bg = pygame.transform.scale(self.bg, (self.settings.playfield_width, self.settings.playfield_height))
+            self.lane_bg = pygame.image.load(table.lane_bg_path).convert()
+            self.lane_bg = pygame.transform.scale(self.lane_bg, (self.settings.playfield_width, self.settings.playfield_height))
+        elif table.bg_path is None:
+            # Explicitly no background (black)
             self.bg = None
             self.lane_bg = None
+        else:
+            # Default wizard backgrounds (fallback)
+            if not self.test_mode:
+                self.bg = pygame.image.load(os.path.join(base_dir, 'wizard.png')).convert()
+                self.bg = pygame.transform.scale(self.bg, (self.settings.playfield_width, self.settings.playfield_height))
+                self.lane_bg = pygame.image.load(os.path.join(base_dir, 'lane_bg.png')).convert()
+                self.lane_bg = pygame.transform.scale(self.lane_bg, (self.settings.playfield_width, self.settings.playfield_height))
+            else:
+                self.bg = None
+                self.lane_bg = None
+
+        # Re‑create tinted backgrounds and overlays (depends on self.bg)
+        self._pre_tint_background()
+
+        # Change music for level (load but don't play)
+        if hasattr(table, 'music_path') and table.music_path:
+            self.sound_manager.change_music(table.music_path)
+            self.music_loaded = True
+        else:
+            # No music for this table: stop any playing and mark as not loaded
+            pygame.mixer.music.stop()
+            self.music_loaded = False
         
-        # Pre‑tint background for orb colors (custom hues)
+        # Change table title
+        self.current_table_title = table.title
+        self.current_tagline = table.tagline
+        self._update_messages()
+        self.current_table_name = table.name
+        self.high_scores = self.load_high_scores(self.current_table_name)
+        self.high_score = self.high_scores[0][0] if self.high_scores else 0
+
+    
+    def _pre_tint_background(self):
+        """Build tinted versions of the current background for orb color effects."""
         self.bg_tinted = {}
         if self.bg:
             def tint_image(img, color):
@@ -332,68 +320,86 @@ class Pinball:
                 tinted.blit(color_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                 return tinted
 
-            # Custom colors for background
-            bg_blue = (30, 205, 255)    # soft cyan‑blue
-            bg_red  = (255, 100, 20)     # bright, orangey ed
-            bg_white = (255, 255, 255)  # white (can adjust slightly)
+            # Define tints for all possible colors
 
-            self.bg_tinted[self.settings.blu] = tint_image(self.bg, bg_blue)
-            self.bg_tinted[self.settings.red] = tint_image(self.bg, bg_red)
-            self.bg_tinted[self.settings.wht] = tint_image(self.bg, bg_white)
+            color_tints = {
+                self.settings.wht: (255, 255, 255),
+                self.settings.blu: (30, 205, 255),
+                self.settings.red: (255, 100, 20),
+                self.settings.pnk: (255, 150, 200),   # soft pink tint
+                self.settings.ppl: (180, 100, 255)    # soft purple tint
+            }
+            for color, tint_color in color_tints.items():
+                self.bg_tinted[color] = tint_image(self.bg, tint_color)
 
-            self.current_bg = self.bg_tinted[self.settings.wht]   # start with white
+            self.current_bg = self.bg_tinted.get(self.settings.wht, self.bg)
         else:
             self.current_bg = None
-         # Overlay surfaces (semi‑transparent tint)
+
         self.overlay_tinted = {}
         if self.bg:
-            overlay_blue = self._make_overlay((10, 15, 255), 25) # Pure Blue Light
-            overlay_red  = self._make_overlay((255, 15, 15), 25) # Pure Red Light
-            overlay_white = self._make_overlay((255, 255, 255), 0)
-            self.overlay_tinted[self.settings.blu] = overlay_blue
-            self.overlay_tinted[self.settings.red] = overlay_red
-            self.overlay_tinted[self.settings.wht] = overlay_white
-            self.current_overlay = self.overlay_tinted[self.settings.wht]
+            # Overlay tints (semi-transparent)
+            overlay_colors = {
+                self.settings.wht: (255, 255, 255, 0),
+                self.settings.blu: (10, 15, 255, 25),
+                self.settings.red: (255, 15, 15, 25),
+                self.settings.pnk: (255, 105, 180, 25),
+                self.settings.ppl: (138, 43, 226, 25)
+            }
+            for color, (r, g, b, a) in overlay_colors.items():
+                surf = self._make_overlay((r, g, b), a)
+                self.overlay_tinted[color] = surf
+            self.current_overlay = self.overlay_tinted.get(self.settings.wht, self.overlay_tinted[self.settings.wht])
         else:
             self.current_overlay = None
 
-        self.ball_save_active = False
-        self.ball_save_start_time = 0
-        self.ball_save_duration = 10000  # 10 seconds in milliseconds  
-
-    def _update_menu_options(self):
-        if self.resume_game:
-            self.menu_options = ['RESUME GAME', 'HIGH SCORES', 'TABLE SELECTOR', 'AUDIO', 'VIDEO', 'CREDITS', 'EXIT']
-        else:
-            self.menu_options = ['START GAME', 'HIGH SCORES', 'TABLE SELECTOR', 'AUDIO', 'VIDEO', 'CREDITS', 'EXIT']
-        # Reset selected option to avoid index errors
-        if self.selected_option >= len(self.menu_options):
-            self.selected_option = 0
-
-    def load_high_scores(self):
+    def load_high_scores(self, table_name):
         scores = []
         try:
             with open('highscores.txt', 'r') as f:
                 for line in f:
                     parts = line.strip().split(',')
                     if len(parts) == 2:
-                        scores.append((int(parts[0]), parts[1]))
+                        score, name = parts
+                        table = "WIZARD'S TOWER"   # old format default
+                    elif len(parts) == 3:
+                        score, name, table = parts
+                    else:
+                        continue
+                    if table == table_name:
+                        scores.append((int(score), name))
         except:
             pass
         scores.sort(key=lambda x: x[0], reverse=True)
         return scores[:5]
 
-    def save_high_score(self, score, name):
-        self.high_scores.append((score, name))
-        self.high_scores.sort(key=lambda x: x[0], reverse=True)
-        self.high_scores = self.high_scores[:5]
-        self.high_score = self.high_scores[0][0] if self.high_scores else 0
+    def save_high_score(self, score, name, table_name):
+        all_scores = []
         try:
-            with open('highscores.txt', 'w') as f:
-                for s, n in self.high_scores:
-                    f.write(f"{s},{n}\n")
+            with open('highscores.txt', 'r') as f:
+                for line in f:
+                    parts = line.strip().split(',')
+                    if len(parts) == 2:
+                        s, n = parts
+                        t = "WIZARD'S TOWER"
+                    elif len(parts) == 3:
+                        s, n, t = parts
+                    else:
+                        continue
+                    all_scores.append((int(s), n, t))
         except:
             pass
+        all_scores.append((score, name, table_name))
+        all_scores.sort(key=lambda x: x[0], reverse=True)
+        try:
+            with open('highscores.txt', 'w') as f:
+                for s, n, t in all_scores:
+                    f.write(f"{s},{n},{t}\n")
+        except:
+            pass
+        # Reload scores for the current table
+        self.high_scores = self.load_high_scores(table_name)
+        self.high_score = self.high_scores[0][0] if self.high_scores else 0
 
     def _draw_high_scores(self):
         try:
@@ -493,6 +499,8 @@ class Pinball:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            if event.type == pygame.VIDEORESIZE:
+                self.display = pygame.display.set_mode(event.size, pygame.RESIZABLE)
             if self.state == GameState.MENU:
                 self._handle_menu_event(event)
             elif self.state == GameState.PLAYING:
@@ -501,9 +509,11 @@ class Pinball:
                 self._handle_paused_event(event)
             elif self.state == GameState.GAME_OVER:
                 self._handle_game_over_event(event)
-            
             elif self.state == GameState.NAME_ENTRY:
                 self._handle_name_entry_event(event)
+            elif self.state == GameState.TABLE_SELECTOR:
+                self._handle_table_selector_event(event)
+            
 
     def _handle_menu_event(self, event):
         # Audio submenu takes precedence
@@ -534,13 +544,13 @@ class Pinball:
                 else:
                     pygame.quit()
                     sys.exit()
+
     def _select_menu_option(self):
         option = self.menu_options[self.selected_option]
         if option == 'START GAME':
             self._start_game()
         elif option == 'TABLE SELECTOR':
-            self.temp_message = "COMING SOON!"
-            self.temp_message_time = pygame.time.get_ticks()
+            self._set_state(GameState.TABLE_SELECTOR)
         elif option == 'AUDIO':
             self.audio_submenu = True
             self.audio_selected = 0
@@ -561,7 +571,7 @@ class Pinball:
     def _handle_name_entry_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN and self.entry_name:
-                self.save_high_score(self.entry_score, self.entry_name.upper())
+                self.save_high_score(self.entry_score, self.entry_name.upper(), self.current_table_name)
                 self._set_state(GameState.MENU)
                 self.entry_name = ""
                 self.entry_score = 0
@@ -607,11 +617,33 @@ class Pinball:
                 elif event.key == pygame.K_ESCAPE:
                     self.audio_submenu = False
 
+    def _handle_table_selector_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                self.table_manager.prev_table()
+                self._load_table(self.table_manager.get_current_table())
+                self.current_table_title = self.table_manager.get_current_table().title
+                self.current_tagline = self.table_manager.get_current_table().tagline
+            elif event.key == pygame.K_RIGHT:
+                self.table_manager.next_table()
+                self._load_table(self.table_manager.get_current_table())
+                self.current_table_title = self.table_manager.get_current_table().title
+                self.current_tagline = self.table_manager.get_current_table().tagline
+            elif event.key == pygame.K_RETURN:
+                # Select current table and return to menu
+                self._set_state(GameState.MENU)
+            elif event.key == pygame.K_ESCAPE:
+                # Cancel: reload the originally selected table? Or just return without changing?
+                # Simpler: just return to menu (current table remains as last cycled)
+                self._set_state(GameState.MENU)
+
     def _handle_game_over_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
                 self._start_game()
             elif event.key == pygame.K_ESCAPE:
+                if self.music_loaded and self.music_playing:
+                    pygame.mixer.music.stop()
                 self._set_state(GameState.MENU)
 
     def _handle_playing_event(self, event):
@@ -620,10 +652,12 @@ class Pinball:
                 self.fl.active = True
                 self.fl.activate()
                 self.notification_center.post_notification('flipper_click', self.fl)
+                self.sound_manager.play('flipper')
             elif event.key == pygame.K_RIGHT:
                 self.fr.active = True
                 self.fr.activate()
                 self.notification_center.post_notification('flipper_click', self.fr)
+                self.sound_manager.play('flipper')   
                 
             elif event.key == pygame.K_p:
                 self._set_state(GameState.PAUSED)
@@ -658,6 +692,7 @@ class Pinball:
                     self.ball_save_start_time = pygame.time.get_ticks()
                     self.secondary_message = 'SAVE'   # display during grace period
                     self.notification_center.post_notification('ball_launch')
+                    self.sound_manager.play('launch')
                     
                     
     def _handle_paused_event(self, event):
@@ -681,23 +716,31 @@ class Pinball:
         for flipper in self.flippers:
             flipper.reset()
 
-        # Reset bumpers to initial color (blue)
-        for bumper in self.bumpers:
-            bumper.color = self.settings.wht
+        # Get the current table's starting color
+        current_table = self.table_manager.get_current_table()
+        if current_table.color_cycle and len(current_table.color_cycle) > 0:
+            initial_color = current_table.color_cycle[0]
+
+        # Reset bumpers to the initial color
+        if current_table.color_cycle:
+            for bumper in self.bumpers:
+
+                bumper.set_color(initial_color)
 
         # Reset lights: turn off and set color to match bumpers' initial
-        for light in self.lights:
-            light.reset(self.settings.wht)
+        if current_table.color_cycle:
+            for light in self.lights:
+                light.reset(initial_color)
 
         # Reset background tint and overlay
         if self.bg_tinted:
-            self.current_bg = self.bg_tinted.get(self.settings.wht, self.bg)
+            self.current_bg = self.bg_tinted.get(initial_color, self.bg)
         if self.overlay_tinted:
-            self.current_overlay = self.overlay_tinted.get(self.settings.wht, self.overlay_tinted[self.settings.wht])
+            self.current_overlay = self.overlay_tinted.get(initial_color, self.overlay_tinted[self.settings.wht])
 
     def _update_messages(self):
         if self.state == GameState.MENU:
-            self.main_message = "CAST A SPELL!"
+            self.main_message = self.current_tagline
             self.secondary_message = "INSERT COIN"
         elif self.state == GameState.PAUSED:
             self.main_message = "PAUSED"
@@ -715,6 +758,9 @@ class Pinball:
 
     # Game start
     def _start_game(self):
+        current_table = self.table_manager.get_current_table()
+        if self.music_loaded and self.music_playing and current_table.music_path:
+            pygame.mixer.music.play(-1)
         self.resume_game = False
         self._reset_game_state()
         self._set_state(GameState.PLAYING)
@@ -762,12 +808,14 @@ class Pinball:
                  self.b.reset()
                  self.b.trapped = False
                  self.notification_center.post_notification('ball_saved')
+                 self.sound_manager.play('ball_saved')
              else:
                  self.temp_message = 'BALL LOST'
                  self.secondary_message = ''
                  self.temp_message_time = now
                  self.lives -= 1
                  self.notification_center.post_notification('ball_lost')
+                 self.sound_manager.play('ball_lost') 
                  if self.lives > 0:
                      self.b.reset()
                      self.b.trapped = False
@@ -775,6 +823,7 @@ class Pinball:
                      
                  else:
                      self.notification_center.post_notification('game_over')
+                     self.sound_manager.play('game_over')  
                      # Check if score qualifies for high score list
                      if (len(self.high_scores) < 5 or self.score_manager.score > min(s for s,_ in self.high_scores)):
                          self.entry_score = self.score_manager.score
@@ -782,6 +831,7 @@ class Pinball:
                          self._set_state(GameState.NAME_ENTRY)
                      else:
                          self._set_state(GameState.GAME_OVER)
+            
                          
                 
 
@@ -795,7 +845,23 @@ class Pinball:
         if self.state != GameState.PLAYING:
             return
 
-        # Update corresponding light's color and turn it on
+        current_table = self.table_manager.get_current_table()
+        points = current_table.get_bumper_score(bumper, self.settings)
+        self.score_manager.add_points(points)
+        self.sound_manager.play('bumper')
+
+        # 1. Update the hit bumper's color (cycle if table has color_cycle)
+        new_color = None
+        if current_table.color_cycle and bumper.radius > 5:  # cycle only for bumpers that can change
+            # Cycle to next color in the table's list
+            if bumper.color in current_table.color_cycle:
+                idx = current_table.color_cycle.index(bumper.color)
+                new_color = current_table.color_cycle[(idx + 1) % len(current_table.color_cycle)]
+            else:
+                new_color = current_table.color_cycle[0]
+            bumper.set_color(new_color)
+
+        # 2. Update the corresponding light's color and turn it on
         try:
             idx = self.bumpers.index(bumper)
             if idx < len(self.lights):
@@ -805,34 +871,39 @@ class Pinball:
         except ValueError:
             pass
 
-        # Generate message
+        # 3. If it's a large bumper, notify all other bumpers to sync colors
+        if bumper.radius > 20 and new_color is not None:
+            self.notification_center.post_notification('large_bumper_hit', new_color)
+
+        # 4. Generate a temporary message (small or large)
+        msg = None
         if bumper.radius > 20:
-            if bumper.color == self.settings.blu:
-                msg = "ORB OF POWER!"
-            elif bumper.color == self.settings.red:
-                msg = "FIREBALL!"
-            elif bumper.color == self.settings.wht:
-                msg = "BALL LIGHTNING!"
-            else:
-                msg = ""
+            msg = current_table.large_bumper_messages.get(bumper.color)
         else:
-            msg = random.choice(["BOOM!", "HISS!", "POP!", "ZAP!", "BUZZ!"])
+            if current_table.small_bumper_messages:
+                msg = random.choice(current_table.small_bumper_messages)
         if msg:
             self.temp_message = msg
             self.temp_message_time = pygame.time.get_ticks()
 
     def on_large_bumper_hit(self, color):
+        current_table = self.table_manager.get_current_table()
+        if not current_table.color_cycle:
+            return  # no cycling for this table
+
+        # Propagate the new color to all bumpers and lights
         for bumper in self.bumpers:
-            bumper.color = color
+            bumper.set_color(color)
         for light in self.lights:
             light.set_color(color)
-        # Update background tint
-        if self.bg_tinted:
+
+        # Update background tint and overlay if enabled
+        if current_table.tint_background and self.bg_tinted:
             self.current_bg = self.bg_tinted.get(color, self.bg)
-        # Update overlay
-        if self.overlay_tinted:
+        if current_table.tint_background and self.overlay_tinted:
             self.current_overlay = self.overlay_tinted.get(color, self.overlay_tinted[self.settings.wht])
 
+            
     # Drawing
     def _draw(self):
         self.screen.fill((0, 0, 0))
@@ -865,7 +936,7 @@ class Pinball:
             title_font = pygame.font.Font(font_path, 12)
         except:
             title_font = pygame.font.Font(None, 36)
-        title_text = title_font.render("THE WIZARD'S TOWER", True, self.settings.wht)
+        title_text = title_font.render(self.current_table_title, True, self.settings.wht)
         title_rect = title_text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 5))
         self.screen.blit(title_text, title_rect)
 
@@ -918,6 +989,16 @@ class Pinball:
         if self.state == GameState.MENU and self.audio_submenu:
             self._draw_audio_submenu()
 
+        # Scale the virtual surface to the current window size
+        win_w, win_h = self.display.get_size()
+        virt_w, virt_h = self.screen.get_size()
+        scale = min(win_w / virt_w, win_h / virt_h)
+        new_w, new_h = int(virt_w * scale), int(virt_h * scale)
+        scaled = pygame.transform.scale(self.screen, (new_w, new_h))
+        x = (win_w - new_w) // 2
+        y = (win_h - new_h) // 2
+        self.display.fill((0, 0, 0))   # clear borders
+        self.display.blit(scaled, (x, y))
         pygame.display.flip()
 
     def _draw_messages(self):
@@ -995,7 +1076,50 @@ class Pinball:
         score_rect = score_text.get_rect(center=(self.settings.screen_width // 2,
                                                   self.settings.top_margin // 2 + 130))
         self.screen.blit(score_text, score_rect)
-    
+
+    def _draw_table_selector(self):
+        # Draw everything normally (the table, bumpers, blocks, etc.)
+        # Clear screen and draw playfield background, blocks, bumpers, ball, flippers, etc.
+        self.screen.fill((0, 0, 0))
+        if self.current_bg:
+            self.screen.blit(self.current_bg, (0, self.playfield_y))
+        if self.lane_bg:
+            self.screen.blit(self.lane_bg, (self.settings.playfield_width, self.playfield_y))
+        self.b.draw_ball()
+        for light in self.lights:
+            light.draw(self.screen)
+        self.draw_bumpers()
+        self.plunger.draw(self.screen)
+        self.draw_blocks()
+        self.fl.draw(self.screen)
+        self.fr.draw(self.screen)
+        if self.current_overlay:
+            self.screen.blit(self.current_overlay, (0, self.playfield_y))
+
+        # Title (dynamic)
+        try:
+            title_font = pygame.font.Font(font_path, 12)
+        except:
+            title_font = pygame.font.Font(None, 36)
+        title_text = title_font.render(self.current_table_title, True, self.settings.wht)
+        title_rect = title_text.get_rect(center=(self.settings.screen_width // 2, self.settings.top_margin // 5))
+        self.screen.blit(title_text, title_rect)
+
+        # Score and lives (optional, but we can show placeholder or nothing)
+        # For simplicity, skip showing scores in selector mode.
+
+        # Instructions overlay (semi-transparent bar at bottom)
+        instr_surf = pygame.Surface((self.settings.screen_width, 40), pygame.SRCALPHA)
+        instr_surf.fill((0, 0, 0, 180))
+        self.screen.blit(instr_surf, (0, self.settings.screen_height - 40))
+        try:
+            instr_font = pygame.font.Font(font_path, 10)
+        except:
+            instr_font = pygame.font.Font(None, 18)
+        instr_text = instr_font.render("LEFT / RIGHT to change table   ENTER to select   ESC to cancel", True, self.settings.wht)
+        instr_rect = instr_text.get_rect(center=(self.settings.screen_width // 2, self.settings.screen_height - 20))
+        self.screen.blit(instr_text, instr_rect)
+        
     
     
     # Test mode

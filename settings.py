@@ -14,11 +14,11 @@ class Settings:
 
         # Margins for UI and plunger lane
         self.top_margin = 100          # height of top message area
-        self.right_margin = 15 + self.br * 2          # width of right plunger lane
+        self.right_margin = self.br * 3.5         # width of right plunger lane
 
         # Screen dimensions
-        self.screen_width = 300 + self.right_margin
-        self.screen_height = 600 + self.top_margin
+        self.screen_width = 335 + self.right_margin
+        self.screen_height = 670 + self.top_margin
 
         
         
@@ -35,7 +35,7 @@ class Settings:
         
 
         # Flipper properties
-        self.f_length = 31/168 * self.playfield_width + 0.5
+        self.f_length = 31/168 * self.playfield_width + (self.br / 20)
         self.restitution = 0.75
 
 
@@ -68,7 +68,7 @@ class Settings:
     
     def init_dynamic_settings(self):
         self.bs = 1   # ball speed
-        self.bsmax = 25 / self.phys_runs # max ball speed
+        self.bsmax = (3 * self.br) / self.phys_runs # max ball speed
 
 
 
