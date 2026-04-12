@@ -14,7 +14,7 @@ class Bumper:
         self.color = color
         self.radius = radius
         self.image = image
-        self.tinted_images = {}
+        self.tinted_images = {}   # cache: color -> tinted surface
         self.glow_start_time = 0
         self.glow_duration = 200
 
@@ -28,30 +28,31 @@ class Bumper:
             circular = scaled.copy()
             circular.blit(mask, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
             self.original_circular = circular
-
-            print(f"DEBUG: Bumper radius {radius}: image loaded, created original_circular")
-
-            # Pre‑tint for each possible bumper color (red, blue, white)
-            for col in [(255,30,0), (0,100,255), (255,255,255)]:
-                self.tinted_images[col] = tint_image(self.original_circular, col)
-            print(f"DEBUG: Tinted images keys: {list(self.tinted_images.keys())}")
+            # Pre‑tint for the initial color
+            self.tinted_images[color] = tint_image(self.original_circular, color)
         else:
             self.original_circular = None
-            print(f"DEBUG: Bumper radius {radius}: no image")
+
+    def set_color(self, new_color):
+        """Change bumper color and update tinted image if needed."""
+        if self.color == new_color:
+            return
+        self.color = new_color
+        if self.original_circular and new_color not in self.tinted_images:
+            self.tinted_images[new_color] = tint_image(self.original_circular, new_color)
 
     def hit(self):
         self.glow_start_time = pygame.time.get_ticks()
 
     def draw(self, screen):
-        # Draw base colored circle
+        # Draw base colored circle (optional, keep for fallback)
         pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius * 0.95)
 
         # Draw image on top if available
         if self.original_circular:
-            # Use the tinted image for the current color
-            if self.color in self.tinted_images:
-                img = self.tinted_images[self.color]
-            else:
-                img = self.original_circular
+            # Get tinted image for current color (create if missing)
+            if self.color not in self.tinted_images:
+                self.tinted_images[self.color] = tint_image(self.original_circular, self.color)
+            img = self.tinted_images[self.color]
             rect = img.get_rect(center=(int(self.x), int(self.y)))
             screen.blit(img, rect)
