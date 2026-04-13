@@ -1,21 +1,30 @@
 import pygame
 import math
 
-
-
 class Flipper:
-    def __init__(self, x, y, length, angle, is_left=True, bevel=True):
+    def __init__(self, x, y, length, angle, is_left=True, bevel=True, image=None):
         self.pivot = (x, y)
-        self.length = length
+        self.length = length          # can be negative for right flipper
         self.angle = angle
         self.target_angle = angle
         self.angular_vel = 0
         self.is_left = is_left
         self.active = False
-        self.pivot_width = 8
-        self.tip_width = 4         
-        self.width = 4         # for collision (original constant)
+        self.pivot_width = 10
+        self.tip_width = 5         
+        self.width = 5         # for collision (original constant)
         self.bevel = bevel
+        self.image = None
+
+        # If an image is provided, scale it to match the flipper's visual size.
+        # We'll use absolute length for width, and the pivot_width for height.
+        if self.image:
+            # Determine desired dimensions
+            target_width = abs(length)
+            target_height = self.pivot_width * 2   # approximate visual height
+            self.original_image = self.image
+            self.image = pygame.transform.scale(self.image, (int(target_width), int(target_height)))
+
         if not self.is_left:
             self.length = -length   # negative for right flipper (drawing)
 
@@ -85,59 +94,54 @@ class Flipper:
         ]
 
     def draw(self, screen):
-        # Tip position using self.length (may be negative for right flipper)
-        tip_x = self.pivot[0] + math.cos(self.angle) * self.length
-        tip_y = self.pivot[1] + math.sin(self.angle) * self.length
+        # If we have an image, draw it rotated around the pivot.
+        if self.image:
+            # Calculate the angle in degrees (pygame uses degrees for rotation)
+            angle_deg = math.degrees(self.angle)
+            # Rotate the image
+            rotated = pygame.transform.rotate(self.image, angle_deg)
+            # Position so that the left edge of the image is at the pivot.
+            # For a left flipper, the pivot is at the left end; for right, at the right end.
+            # We'll assume the image's left edge corresponds to the pivot point.
+            rect = rotated.get_rect(midleft=(self.pivot[0], self.pivot[1]))
+            screen.blit(rotated, rect)
+        else:
+            visual_length = self.length * 0.93
+            tip_x = self.pivot[0] + math.cos(self.angle) * visual_length
+            tip_y = self.pivot[1] + math.sin(self.angle) * visual_length
 
-        # Visual dimensions (narrow at pivot, wide at tip)
-        w_pivot = 16
-        w_tip = 8
+            w_pivot = 20
+            w_tip = 10
 
-        # Direction vector from pivot to tip
-        dx = tip_x - self.pivot[0]
-        dy = tip_y - self.pivot[1]
-        length = math.hypot(dx, dy)
-        if length == 0:
-            return
-        dir_x = dx / length
-        dir_y = dy / length
+            dx = tip_x - self.pivot[0]
+            dy = tip_y - self.pivot[1]
+            length = math.hypot(dx, dy)
+            if length == 0:
+                return
+            dir_x = dx / length
+            dir_y = dy / length
+            perp_x = -dir_y
+            perp_y = dir_x
+            side = 1 if self.is_left else -1
 
-        # Perpendicular (rotate 90° counter‑clockwise)
-        perp_x = -dir_y
-        perp_y = dir_x
+            half_pivot = w_pivot / 2
+            half_tip = w_tip / 2
 
-        # Mirror perpendicular for right flipper
-        side = 1 if self.is_left else -1
+            pivot_bottom = (self.pivot[0] - side * half_pivot * perp_x,
+                            self.pivot[1] - side * half_pivot * perp_y + self.width)
+            pivot_top    = (self.pivot[0] + side * half_pivot * perp_x,
+                            self.pivot[1] + side * half_pivot * perp_y + self.width)
+            tip_top      = (tip_x + side * half_tip * perp_x,
+                            tip_y + side * half_tip * perp_y + self.width)
+            tip_bottom   = (tip_x - side * half_tip * perp_x,
+                            tip_y - side * half_tip * perp_y + self.width)
 
-        half_pivot = w_pivot / 2
-        half_tip = w_tip / 2
+            pygame.draw.polygon(screen, (255, 255, 255),
+                                [pivot_bottom, pivot_top, tip_top, tip_bottom])
 
-        # Four corners of the tapered shape
-        pivot_bottom = (self.pivot[0] - side * half_pivot * perp_x,
-                        self.pivot[1] - side * half_pivot * perp_y + self.width)
-        pivot_top    = (self.pivot[0] + side * half_pivot * perp_x,
-                        self.pivot[1] + side * half_pivot * perp_y + self.width)
-        tip_top      = (tip_x + side * half_tip * perp_x,
-                        tip_y + side * half_tip * perp_y + self.width)
-        tip_bottom   = (tip_x - side * half_tip * perp_x,
-                        tip_y - side * half_tip * perp_y + self.width)
-
-        # Draw the flipper body
-        pygame.draw.polygon(screen, (255, 255, 255),
-                            [pivot_bottom, pivot_top, tip_top, tip_bottom])
-
-        # Draw rounded ends (shifted down by self.width)
-        pygame.draw.circle(screen, (255, 255, 255),
-                           (int(self.pivot[0]), int(self.pivot[1] + self.width)),
-                           int(w_pivot//2))
-        pygame.draw.circle(screen, (255, 255, 255),
-                           (int(tip_x), int(tip_y + self.width)),
-                           int(w_tip//2))
-        # Bevel effect
-        if self.bevel:
-            pass
-            # Light line on top edge
-            #pygame.draw.line(screen, (210, 210, 210), pivot_top, tip_top, 1)
-            # Dark line on bottom edge
-            #pygame.draw.line(screen, (80, 80, 80), pivot_bottom, tip_bottom, 1)
-    
+            pygame.draw.circle(screen, (255, 255, 255),
+                               (int(self.pivot[0]), int(self.pivot[1] + self.width)),
+                               int(w_pivot//2))
+            pygame.draw.circle(screen, (255, 255, 255),
+                               (int(tip_x), int(tip_y + self.width)),
+                               int(w_tip//2))
