@@ -35,7 +35,7 @@ class Settings:
         
 
         # Flipper properties
-        self.f_length = 31/168 * self.playfield_width + (self.br / 20)
+        self.f_length = 32/168 * self.playfield_width + (self.br / 20)
         self.restitution = 0.75
 
 
