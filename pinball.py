@@ -850,6 +850,7 @@ class Pinball:
         self.score_manager.add_points(points)
         self.sound_manager.play('bumper')
 
+
         # 1. Update the hit bumper's color (cycle if table has color_cycle)
         new_color = None
         if current_table.color_cycle and bumper.radius > 5:  # cycle only for bumpers that can change
@@ -872,7 +873,7 @@ class Pinball:
             pass
 
         # 3. If it's a large bumper, notify all other bumpers to sync colors
-        if bumper.radius > 20 and new_color is not None:
+        if bumper.radius > 50 and new_color is not None:
             self.notification_center.post_notification('large_bumper_hit', new_color)
 
         # 4. Generate a temporary message (small or large)

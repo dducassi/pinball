@@ -56,11 +56,12 @@ class Settings:
         self.red = (255, 30, 0)
         self.blu = (0, 100, 255)
         self.grn = (0, 255, 0)
-        self.ylw = (255, 255, 255)
+        self.ylw = (255, 255, 0)
         self.ong = (255, 130, 0)
-        self.ppl = (130, 0, 255)
+        self.ppl = (150, 0, 255)
+        self.pnk = (255, 105, 180) 
         self.gry = (100, 100, 100)
-        self.slv = (150, 150, 150)
+        self.slv = (155, 155, 155)
 
         self.music_volume = 0.8   # 0.0 to 1.0
 
